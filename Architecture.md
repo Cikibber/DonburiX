@@ -9,6 +9,9 @@ dan menyelaraskan status pesanan serta ketersediaan bahan.
 
 Dokumen ini mengikuti kebutuhan pada [README.md](README.md).
 Struktur folder, prototype, endpoint, dan model tambahan merupakan **rancangan implementasi**, bukan fitur yang sudah tersedia.
+Implementasi awal untuk tugas ke-4 tersedia pada `apps/mobile`: Bowl Builder dengan Riverpod,
+form, validasi, widget test, dan repository lokal. Lihat [laporan tugas 4](docs/tugas4/README.md).
+Checkout, Firebase, geofence, KDS, dan integrasi ricebowltracker tetap merupakan tahap pengembangan berikutnya.
 Rancangan integrasi mengacu pada kode [ricebowltracker](https://github.com/Cikibber/ricebowltracker)
 di branch `main`, commit `da727161977cf041e482825e4d9d413347b6bb1c`, yang diperiksa pada 1 Oktober 2026.
 

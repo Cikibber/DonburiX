@@ -1,0 +1,37 @@
+name: Flutter feature checks
+
+on:
+  push:
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/flutter.yml'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/flutter.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bowl-builder:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test --coverage
+      - run: flutter build web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: apps/mobile/coverage/lcov.info

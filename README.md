@@ -54,3 +54,26 @@ Aplikasi dinyatakan memenuhi syarat proyek akhir apabila:
 2. **Keberhasilan Geofence:** Aplikasi mobile mampu mengirim sinyal kedatangan pelanggan saat melintasi perimeter radius 500 meter dari koordinat gerai secara konsisten.
 3. **Integritas State Custom Builder:** Validasi komposisi menu berjalan konsisten tanpa anomali harga ataupun duplikasi item pada keranjang.
 4. **Alur End-to-End Tanpa Celah:** Skenario mulai dari peracikan menu, pemesanan, penerimaan tiket di KDS, pemicu geofence, hingga konfirmasi pengambilan (*picked up*) dapat didemonstrasikan secara langsung tanpa kegagalan sistem.
+
+---
+
+## 7. Implementasi Tugas Ke-4: Flutter Bowl Builder
+
+Feature awal tersedia pada [`apps/mobile`](apps/mobile): racik bowl dengan **Riverpod**, form, validasi,
+enam kondisi UI, pencegahan submit ganda, dan keranjang lokal.
+Feature ini memakai data demo; integrasi backend dan ricebowltracker mengikuti [Architecture.md](Architecture.md).
+
+Jalankan dari folder `apps/mobile`:
+
+```sh
+flutter pub get
+flutter run -d chrome
+```
+
+Dokumentasi pengumpulan:
+
+* [Laporan tugas 4 dan screenshot](docs/tugas4/README.md)
+* [Catatan prompt AI dan refleksi pemeriksaan mandiri](docs/tugas4/AI_USAGE.md)
+* [Panduan menjalankan, scenario demo, dan test](apps/mobile/README.md)
+
+Verifikasi lokal: analyze berhasil, **14 test lulus**, dan build Flutter Web berhasil.
