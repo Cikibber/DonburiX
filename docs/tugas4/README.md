@@ -22,7 +22,7 @@ Label prototype pada aplikasi menjelaskan batas tersebut.
 | Loading submit dan cegah double tap | `isSubmitting`, tombol dan input nonaktif, guard notifier | Screenshot 06; test double tap dan reentrancy |
 | State management konsisten | Semua state data/bisnis melalui Riverpod | `bowl_providers.dart` |
 | Pisahkan tanggung jawab | Presentation → notifier → repository | Struktur feature pada bagian 3 |
-| Widget test state utama | 12 widget test | `bowl_builder_widget_test.dart` |
+| Widget test state utama dan edge case | 18 widget test | `bowl_builder_widget_test.dart` |
 | Dokumentasi visual | 9 screenshot render Flutter Web | Folder `screenshots/` |
 | Cantumkan penggunaan AI | Prompt asli, kontribusi AI, dan template refleksi mahasiswa | [AI_USAGE.md](AI_USAGE.md) |
 
@@ -120,9 +120,9 @@ Lingkungan verifikasi: Flutter **3.44.1**, Dart **3.12.1**, Riverpod **3.4.3**, 
 | Pemeriksaan | Hasil lokal |
 | --- | --- |
 | `flutter analyze` | Lulus, `No issues found!` |
-| `flutter test --coverage` | Lulus, **14 test**: 12 widget dan 2 domain/repository |
-| Line coverage pada file yang dilaporkan LCOV | **278/292 baris, 95,2%** |
-| `flutter build web` | Build release berhasil |
+| `flutter test --coverage` | Lulus, **20 test**: 18 widget dan 2 domain/repository |
+| Line coverage pada file yang dilaporkan LCOV | **280/292 baris, 95,9%** |
+| `flutter build web` | Build release berhasil pada implementasi awal |
 | Browser QA | Retry load, validasi, submit, retry submit, dan membuka keranjang berhasil |
 | Console browser | Tidak ditemukan error pada sesi QA |
 | Tampilan sempit | Widget test viewport 390×844 lulus; screenshot mobile tersedia |
@@ -151,9 +151,16 @@ Workflow `.github/workflows/flutter.yml` disiapkan untuk analyze, test, dan buil
 12. Layar mobile sempit tidak menghasilkan layout exception.
 13. Repository menghitung ulang harga dari katalog, bukan harga yang dikirim caller.
 14. Domain menolak kategori duplikat dan stok yang tidak mencukupi.
+15. Jumlah tepat 1 porsi diterima dan menambahkan satu porsi ke keranjang.
+16. Jumlah tepat 10 porsi diterima jika stok mencukupi; harga total dan isi keranjang sesuai.
+17. Catatan tepat 120 karakter diterima dan tetap tersimpan pada entry keranjang.
+18. Error submit yang tidak terduga menghentikan loading, mengaktifkan form, dan dapat dipulihkan melalui retry.
+19. Hasil submit sukses setelah `ProviderScope` dilepas tidak menyebabkan exception atau feedback pada widget yang sudah ditutup.
+20. Hasil submit gagal setelah `ProviderScope` dilepas tidak menyebabkan exception atau feedback pada widget yang sudah ditutup.
 
 Test memakai controlled repository dan `Completer`, sehingga tidak mengandalkan network atau menunggu delay produksi.
 Unit test repository demo memakai delay lokal yang memang menjadi bagian implementasi tersebut.
+Enam test terakhir ditambahkan pada tahap penyempurnaan P4. Detail perubahan tersedia pada [catatan progres](PROGRESS.md).
 
 ## 7. Bukti Visual
 

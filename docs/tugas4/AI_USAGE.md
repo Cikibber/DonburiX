@@ -28,7 +28,7 @@ Tidak ada prompt tambahan ke subagent; implementasi dan verifikasi dilakukan dal
 | Repository | `data/demo_bowl_repository.dart` | Data demo dan operasi asynchronous yang dapat direproduksi |
 | State management | `state/bowl_providers.dart` | Catalog AsyncNotifier, builder Notifier, guard submit, derived total |
 | UI | `presentation/` dan `app.dart` | Form, state screens, feedback, dan keranjang |
-| Test | `test/` | 12 widget test dan 2 domain/repository test |
+| Test | `test/` | 18 widget test dan 2 domain/repository test setelah penyempurnaan |
 | Bukti visual | `docs/tugas4/screenshots/` | Screenshot aplikasi yang berjalan melalui browser |
 | Dokumentasi/CI | `docs/tugas4/`, README, workflow | Draft laporan, instruksi menjalankan, dan pemeriksaan otomatis |
 
@@ -40,7 +40,7 @@ Path feature pada tabel relatif terhadap `apps/mobile/lib/features/bowl_builder`
 * Memeriksa guard notifier yang langsung aktif sebelum `await`, sehingga reentrant submit ditolak.
 * Memeriksa bahwa input dipertahankan saat gagal dan keranjang tidak bertambah pada kegagalan.
 * Memvalidasi ulang draft dan harga katalog pada repository lokal.
-* Menjalankan analyze, 14 test, dan build web.
+* Pada implementasi awal: menjalankan analyze, 14 test, dan build web.
 * Memeriksa screenshot loading submit, sukses, validasi, serta error submit.
 * Menguji retry melalui browser dan mengambil screenshot pada viewport mobile.
 
@@ -48,6 +48,21 @@ Temuan review lokal: tidak ditemukan blocker untuk scope prototype tugas ini.
 Pemisahan repository mempermudah test dan penggantian data source; guard widget/notifier mencegah submit ulang dalam satu sesi.
 Batas integrasi: keranjang masih in-memory; belum ada API, persistensi Firebase, atau checkout backend.
 Ini bukan laporan audit produksi atau review independen oleh mahasiswa.
+
+### Bantuan pada penyempurnaan P4
+
+Prompt persetujuan pengguna: **“oke lakukan dan commit”**.
+Konteks persetujuannya adalah penambahan test jumlah 1/10 porsi, catatan 120 karakter,
+error submit tak terduga, serta operasi yang selesai setelah widget ditutup.
+
+Asisten menambahkan enam widget test pada `bowl_builder_widget_test.dart`,
+menjalankan analyze serta seluruh test, dan memperbarui laporan hasil menjadi 20 test lulus.
+Repository test memakai `Completer` baru untuk percobaan retry agar kegagalan pertama
+dan keberhasilan kedua merupakan dua hasil asynchronous yang berbeda.
+Test lifecycle melepaskan seluruh `ProviderScope`; ini tidak mengklaim bahwa navigasi biasa otomatis membatalkan request.
+
+Perubahan merupakan pekerjaan penyempurnaan pengujian, bukan implementasi awal feature yang baru dibuat ulang.
+Refleksi mahasiswa di bawah tetap diisi berdasarkan pemeriksaan pribadi yang benar-benar dilakukan.
 
 ## 5. Pemeriksaan Mandiri Mahasiswa — Wajib Diisi
 

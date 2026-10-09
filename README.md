@@ -76,4 +76,7 @@ Dokumentasi pengumpulan:
 * [Catatan prompt AI dan refleksi pemeriksaan mandiri](docs/tugas4/AI_USAGE.md)
 * [Panduan menjalankan, scenario demo, dan test](apps/mobile/README.md)
 
-Verifikasi lokal: analyze berhasil, **14 test lulus**, dan build Flutter Web berhasil.
+Verifikasi lokal terbaru: analyze berhasil dan **20 test lulus**.
+Build Flutter Web berhasil pada implementasi awal.
+Penyempurnaan P4 menambahkan test batas input, pemulihan error submit, dan keamanan lifecycle asynchronous.
+Lihat [catatan progres penyempurnaan P4](docs/tugas4/PROGRESS.md).

@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 class ControlledBowlRepository implements BowlRepository {
   final loading = Completer<List<Ingredient>>();
-  final submission = Completer<CartEntry>();
+  var submission = Completer<CartEntry>();
   int loadCount = 0;
   int submitCount = 0;
   BowlDraft? receivedDraft;
@@ -173,6 +173,63 @@ void main() {
     expect(repository.submitCount, 0);
   });
 
+  for (final quantity in [1, 10]) {
+    testWidgets('quantity boundary $quantity submits with sufficient stock', (
+      tester,
+    ) async {
+      final repository = ControlledBowlRepository();
+      await load(tester, repository);
+      await selectBowl(tester);
+      await tester.enterText(
+        find.byKey(const Key('quantity-input')),
+        quantity.toString(),
+      );
+      await submit(tester);
+
+      expect(repository.submitCount, 1);
+      expect(repository.receivedDraft!.quantity, quantity);
+      expect(repository.receivedDraft!.totalPrice, 25000 * quantity);
+      expect(
+        find.text('Jumlah harus bilangan bulat antara 1 dan 10.'),
+        findsNothing,
+      );
+
+      repository.submission.complete(
+        CartEntry(id: 'boundary-$quantity', bowl: repository.receivedDraft!),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Keranjang ($quantity)'), findsOneWidget);
+      expect(
+        find.text('$quantity porsi berhasil ditambahkan ke keranjang.'),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('a 120-character note is accepted and preserved in the cart', (
+    tester,
+  ) async {
+    final repository = ControlledBowlRepository();
+    final note = List.filled(120, 'a').join();
+    await load(tester, repository);
+    await selectBowl(tester);
+    await tester.enterText(find.byKey(const Key('note-input')), note);
+    await submit(tester);
+
+    expect(repository.submitCount, 1);
+    expect(repository.receivedDraft!.note, note);
+    expect(find.text('Catatan maksimal 120 karakter.'), findsNothing);
+    repository.submission.complete(
+      CartEntry(id: 'note-boundary', bowl: repository.receivedDraft!),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cart-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 porsi · $note'), findsOneWidget);
+  });
+
   testWidgets('sold-out ingredient cannot be selected', (tester) async {
     final repository = ControlledBowlRepository();
     await load(tester, repository);
@@ -289,4 +346,88 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Keranjang (1)'), findsOneWidget);
   });
+
+  testWidgets('unexpected submit error unlocks the form and retry succeeds', (
+    tester,
+  ) async {
+    final repository = ControlledBowlRepository();
+    await load(tester, repository);
+    await selectBowl(tester);
+    await tester.enterText(find.byKey(const Key('note-input')), 'Saus dipisah');
+    await submit(tester);
+    repository.submission.completeError(
+      StateError('Unexpected storage failure'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Bowl belum tersimpan. Silakan coba lagi.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('submit-loading')), findsNothing);
+    expect(find.text('Keranjang (0)'), findsOneWidget);
+    expect(find.text('Saus dipisah'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('quantity-input')))
+          .enabled,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('submit-button')))
+          .onPressed,
+      isNotNull,
+    );
+
+    repository.submission = Completer<CartEntry>();
+    await submit(tester);
+    expect(repository.submitCount, 2);
+    expect(repository.receivedDraft!.note, 'Saus dipisah');
+    repository.submission.complete(
+      CartEntry(id: 'retry-cart', bowl: repository.receivedDraft!),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Keranjang (1)'), findsOneWidget);
+    expect(find.byKey(const Key('submit-error')), findsNothing);
+    expect(
+      find.text('1 porsi berhasil ditambahkan ke keranjang.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final fails in [false, true]) {
+    testWidgets(
+      'late submit ${fails ? 'failure' : 'success'} after scope disposal causes no exception',
+      (tester) async {
+        final repository = ControlledBowlRepository();
+        await load(tester, repository);
+        await selectBowl(tester);
+        await submit(tester);
+        expect(find.byKey(const Key('submit-loading')), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        expect(find.byType(ProviderScope), findsNothing);
+        if (fails) {
+          repository.submission.completeError(
+            const BowlFailure('Late failure'),
+          );
+        } else {
+          repository.submission.complete(
+            CartEntry(id: 'late-cart', bowl: repository.receivedDraft!),
+          );
+        }
+        await tester.pumpAndSettle();
+
+        expect(repository.submitCount, 1);
+        expect(find.byType(DonburiXApp), findsNothing);
+        expect(find.byKey(const Key('submit-success')), findsNothing);
+        expect(find.byKey(const Key('submit-error')), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }
