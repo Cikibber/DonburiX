@@ -3,6 +3,7 @@ import 'dart:async';
 import '../domain/bowl_models.dart';
 import '../domain/bowl_repository.dart';
 import '../domain/bowl_validation.dart';
+import '../../orders/domain/order_models.dart';
 
 const demoIngredients = [
   Ingredient(
@@ -75,8 +76,10 @@ class DemoBowlRepository implements BowlRepository {
 
   final String scenario;
   final List<CartEntry> _cart = [];
+  final List<Order> _orders = [];
   int _loadAttempts = 0;
   int _submitAttempts = 0;
+  int _checkoutAttempts = 0;
 
   @override
   Future<List<Ingredient>> loadIngredients() async {
@@ -116,5 +119,87 @@ class DemoBowlRepository implements BowlRepository {
     final entry = CartEntry(id: 'local-${_cart.length + 1}', bowl: checked);
     _cart.add(entry);
     return entry;
+  }
+
+  @override
+  Future<List<Order>> latestOrders() async {
+    if (scenario == 'orders-empty') return const [];
+    if (scenario == 'orders-error') {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      throw const OrderFailure(
+        'Riwayat pesanan belum dapat dimuat. Silakan coba lagi.',
+      );
+    }
+    return List.unmodifiable(_orders);
+  }
+
+  @override
+  Stream<List<Order>> watchOrders() async* {
+    if (scenario == 'orders-empty') {
+      yield const [];
+      return;
+    }
+    if (scenario == 'orders-error') {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      throw const OrderFailure(
+        'Riwayat pesanan belum dapat dimuat. Silakan coba lagi.',
+      );
+    }
+    yield List.unmodifiable(_orders);
+  }
+
+  @override
+  Future<Order> createOrder(CheckoutDraft draft) async {
+    _checkoutAttempts++;
+    final name = draft.customerName.trim();
+    if (name.isEmpty) {
+      throw const OrderFailure('Nama pemesan wajib diisi.');
+    }
+    if (draft.items.isEmpty) {
+      throw const OrderFailure('Keranjang masih kosong.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (scenario == 'checkout-error' && _checkoutAttempts == 1) {
+      throw const OrderFailure('Pesanan belum tersimpan. Silakan coba lagi.');
+    }
+    var total = 0;
+    for (final entry in draft.items) {
+      final checked = BowlDraft(
+        ingredients: entry.bowl.ingredients
+            .map((item) => _canonical(item.id))
+            .toList(),
+        quantity: entry.bowl.quantity,
+        note: entry.bowl.note,
+      );
+      try {
+        BowlValidation.validateDraft(checked);
+      } on BowlFailure catch (error) {
+        throw OrderFailure(error.message);
+      }
+      total += checked.totalPrice;
+    }
+    final now = DateTime.now();
+    final stamp =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final order = Order(
+      id: 'order-${_orders.length + 1}',
+      displayId: 'DX-$stamp-${(_orders.length + 1).toString().padLeft(3, '0')}',
+      customerName: name,
+      type: draft.type,
+      items: List.unmodifiable(draft.items),
+      totalPrice: total,
+      status: OrderStatus.placed,
+      createdAt: now,
+    );
+    _orders.insert(0, order);
+    return order;
+  }
+
+  Ingredient _canonical(String id) {
+    final matches = demoIngredients.where((item) => item.id == id);
+    if (matches.length != 1) {
+      throw const BowlFailure('Bahan tidak ditemukan.');
+    }
+    return matches.single;
   }
 }

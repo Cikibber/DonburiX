@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bowl_builder/domain/bowl_models.dart';
 import '../../bowl_builder/state/bowl_providers.dart';
+import '../../orders/domain/order_models.dart';
+import '../../orders/presentation/checkout_screen.dart';
+import '../../orders/presentation/orders_screen.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -78,7 +81,21 @@ class CartScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   key: const Key('checkout-button'),
-                  onPressed: () {},
+                  onPressed: () async {
+                    final order = await Navigator.of(context).push<Order>(
+                      MaterialPageRoute<Order>(
+                        builder: (context) => const CheckoutScreen(),
+                      ),
+                    );
+                    if (context.mounted && order != null) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute<void>(
+                          builder: (context) =>
+                              OrderSuccessScreen(order: order),
+                        ),
+                      );
+                    }
+                  },
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: const Text('Lanjut ke Checkout'),
                 ),
@@ -192,6 +209,54 @@ class _CartEmpty extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class OrderSuccessScreen extends StatelessWidget {
+  const OrderSuccessScreen({super.key, required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pesanan dibuat')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle, size: 56, color: Colors.green),
+              const SizedBox(height: 24),
+              Text(
+                'Pesanan ${order.displayId} dibuat.',
+                key: const Key('order-success'),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${order.customerName} · ${order.type.label} · ${formatRupiah(order.totalPrice)}',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                key: const Key('order-success-track'),
+                onPressed: () {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const OrdersScreen(),
+                    ),
+                    (route) => route.isFirst,
+                  );
+                },
+                child: const Text('Lacak Pesanan'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:donburix/features/bowl_builder/data/demo_bowl_repository.dart';
 import 'package:donburix/features/bowl_builder/domain/bowl_models.dart';
 import 'package:donburix/features/bowl_builder/domain/bowl_repository.dart';
 import 'package:donburix/features/bowl_builder/state/bowl_providers.dart';
+import 'package:donburix/features/orders/domain/order_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,17 @@ class ControlledBowlRepository implements BowlRepository {
     receivedDraft = draft;
     return submission.future;
   }
+
+  @override
+  Future<Order> createOrder(CheckoutDraft draft) {
+    throw UnimplementedError('Controlled repository tidak dipakai untuk order');
+  }
+
+  @override
+  Future<List<Order>> latestOrders() => Future.value(const []);
+
+  @override
+  Stream<List<Order>> watchOrders() => Stream.value(const []);
 }
 
 Future<void> mount(
