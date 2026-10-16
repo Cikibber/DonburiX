@@ -30,6 +30,7 @@ class BowlBuilderState {
     this.isSubmitting = false,
     this.submitError,
     this.successMessage,
+    this.cartError,
     List<CartEntry> cart = const [],
   }) : selectedIds = Map.unmodifiable(selectedIds),
        cart = List.unmodifiable(cart);
@@ -40,6 +41,7 @@ class BowlBuilderState {
   final bool isSubmitting;
   final String? submitError;
   final String? successMessage;
+  final String? cartError;
   final List<CartEntry> cart;
 
   BowlBuilderState copyWith({
@@ -49,6 +51,7 @@ class BowlBuilderState {
     bool? isSubmitting,
     String? submitError,
     String? successMessage,
+    String? cartError,
     List<CartEntry>? cart,
   }) => BowlBuilderState(
     selectedIds: selectedIds ?? this.selectedIds,
@@ -57,6 +60,7 @@ class BowlBuilderState {
     isSubmitting: isSubmitting ?? this.isSubmitting,
     submitError: submitError,
     successMessage: successMessage,
+    cartError: cartError,
     cart: cart ?? this.cart,
   );
 }
@@ -81,6 +85,34 @@ class BowlBuilderNotifier extends Notifier<BowlBuilderState> {
 
   void setNote(String value) {
     if (!state.isSubmitting) state = state.copyWith(note: value);
+  }
+
+  void removeFromCart(String entryId) {
+    if (state.isSubmitting) return;
+    state = state.copyWith(
+      cart: state.cart.where((entry) => entry.id != entryId).toList(),
+    );
+  }
+
+  void updateCartQuantity(String entryId, int quantity) {
+    if (state.isSubmitting) return;
+    final index = state.cart.indexWhere((entry) => entry.id == entryId);
+    if (index == -1) return;
+    final entry = state.cart[index];
+    final candidate = BowlDraft(
+      ingredients: entry.bowl.ingredients,
+      quantity: quantity,
+      note: entry.bowl.note,
+    );
+    try {
+      BowlValidation.validateDraft(candidate);
+    } on BowlFailure catch (error) {
+      state = state.copyWith(cartError: error.message);
+      return;
+    }
+    final updated = List<CartEntry>.of(state.cart);
+    updated[index] = CartEntry(id: entry.id, bowl: candidate);
+    state = state.copyWith(cart: updated);
   }
 
   Future<void> submit() async {
@@ -134,4 +166,14 @@ final bowlTotalProvider = Provider<int>((ref) {
       .where((item) => builder.selectedIds[item.category] == item.id)
       .fold(0, (sum, item) => sum + item.price);
   return unitPrice * quantity;
+});
+
+final cartTotalProvider = Provider<int>((ref) {
+  final builder = ref.watch(bowlBuilderProvider);
+  return builder.cart.fold(0, (sum, entry) => sum + entry.bowl.totalPrice);
+});
+
+final cartItemCountProvider = Provider<int>((ref) {
+  final builder = ref.watch(bowlBuilderProvider);
+  return builder.cart.fold(0, (sum, entry) => sum + entry.bowl.quantity);
 });

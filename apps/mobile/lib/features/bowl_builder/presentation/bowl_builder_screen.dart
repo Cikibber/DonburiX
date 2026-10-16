@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/bowl_models.dart';
 import '../domain/bowl_validation.dart';
 import '../state/bowl_providers.dart';
+import '../../cart/presentation/cart_screen.dart';
 import 'widgets/feature_message.dart';
 import 'widgets/ingredient_field.dart';
 
@@ -35,7 +36,13 @@ class _BowlBuilderScreenState extends ConsumerState<BowlBuilderScreen> {
         actions: [
           TextButton.icon(
             key: const Key('cart-button'),
-            onPressed: () => _showCart(context, builder.cart),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const CartScreen(),
+                ),
+              );
+            },
             icon: const Icon(Icons.shopping_bag_outlined),
             label: Text('Keranjang ($cartQuantity)'),
           ),
@@ -256,54 +263,4 @@ class _BowlBuilderScreenState extends ConsumerState<BowlBuilderScreen> {
       ),
     ),
   );
-
-  void _showCart(BuildContext context, List<CartEntry> entries) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * .7,
-            ),
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                Text(
-                  'Keranjang Anda',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 12),
-                if (entries.isEmpty) const Text('Keranjang masih kosong.'),
-                for (final entry in entries)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      entry.bowl.ingredients
-                          .map((item) => item.name)
-                          .join(' · '),
-                    ),
-                    subtitle: Text(
-                      '${entry.bowl.quantity} porsi${entry.bowl.note.isEmpty ? '' : ' · ${entry.bowl.note}'}',
-                    ),
-                    trailing: Text(formatRupiah(entry.bowl.totalPrice)),
-                  ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Keranjang lokal untuk demonstrasi. Muat ulang aplikasi akan menghapus isinya.',
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Lanjut Meracik'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

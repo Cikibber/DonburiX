@@ -71,6 +71,14 @@ Future<void> submit(WidgetTester tester) async {
   await tester.pump();
 }
 
+@visibleForTesting
+CartEntry cartEntryForTest(BowlDraft draft, {String id = 'local-1'}) {
+  return CartEntry(id: id, bowl: draft);
+}
+
+@visibleForTesting
+Completer<CartEntry> newSubmissionForTest() => Completer<CartEntry>();
+
 void main() {
   testWidgets('initial loading shows progress and no form or submit button', (
     tester,
