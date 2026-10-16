@@ -95,7 +95,7 @@ Bukti test: `test/order_checkout_test.dart` (AC1–AC5, error retry, gagal-then-
 
 ### Commit
 
-(menyusul)
+`e0756ac` — `feat(mobile): add checkout and order tracking for MVP V1`.
 
 ## Bukti acceptance criteria
 
