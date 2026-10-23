@@ -36,6 +36,22 @@ class ControlledBowlRepository implements BowlRepository {
   }
 
   @override
+  Future<Order?> findByDisplayId(String displayId) => Future.value(null);
+
+  @override
+  Stream<Order> watchOrder(String orderId) => const Stream.empty();
+
+  @override
+  Future<Order> advanceStatus(String orderId) {
+    throw UnimplementedError('Controlled repository tidak dipakai untuk order');
+  }
+
+  @override
+  Future<Order> cancelOrder(String orderId) {
+    throw UnimplementedError('Controlled repository tidak dipakai untuk order');
+  }
+
+  @override
   Future<List<Order>> latestOrders() => Future.value(const []);
 
   @override
