@@ -6,5 +6,9 @@ abstract interface class BowlRepository {
   Future<CartEntry> addToCart(BowlDraft draft);
   Future<Order> createOrder(CheckoutDraft draft);
   Future<List<Order>> latestOrders();
+  Future<Order?> findByDisplayId(String displayId);
+  Stream<Order> watchOrder(String orderId);
+  Future<Order> advanceStatus(String orderId);
+  Future<Order> cancelOrder(String orderId);
   Stream<List<Order>> watchOrders();
 }

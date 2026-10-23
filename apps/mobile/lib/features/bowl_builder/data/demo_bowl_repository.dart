@@ -4,6 +4,7 @@ import '../domain/bowl_models.dart';
 import '../domain/bowl_repository.dart';
 import '../domain/bowl_validation.dart';
 import '../../orders/domain/order_models.dart';
+import '../../orders/domain/order_rules.dart';
 
 const demoIngredients = [
   Ingredient(
@@ -77,22 +78,58 @@ class DemoBowlRepository implements BowlRepository {
   final String scenario;
   final List<CartEntry> _cart = [];
   final List<Order> _orders = [];
+
+  /// Sisa stok aktual, dipotong saat checkout dan dikembalikan saat batal.
+  final Map<String, int> _stock = {
+    for (final item in demoIngredients) item.id: item.availableStock,
+  };
+
+  final StreamController<Order> _orderUpdates =
+      StreamController<Order>.broadcast();
+  String? _sequenceDay;
+  int _dailySequence = 0;
   int _loadAttempts = 0;
   int _submitAttempts = 0;
   int _checkoutAttempts = 0;
+
+  void dispose() => _orderUpdates.close();
+
+  List<Ingredient> _catalogSnapshot() => [
+    for (final item in demoIngredients)
+      Ingredient(
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        availableStock: _stock[item.id] ?? item.availableStock,
+      ),
+  ];
+
+  Order? _findById(String orderId) {
+    for (final order in _orders) {
+      if (order.id == orderId) return order;
+    }
+    return null;
+  }
+
+  int _activeQueuePortions() => _orders.fold(0, (sum, order) {
+    if (order.cancelled) return sum;
+    if (order.status == OrderStatus.completed) return sum;
+    return sum + order.totalPortions;
+  });
 
   @override
   Future<List<Ingredient>> loadIngredients() async {
     _loadAttempts++;
     if (scenario == 'loading') return Completer<List<Ingredient>>().future;
     await Future<void>.delayed(const Duration(milliseconds: 650));
-    if (scenario == 'empty') return [];
+    if (scenario == 'empty') return const [];
     if (scenario == 'error' && _loadAttempts == 1) {
       throw const BowlFailure(
         'Pilihan bahan belum dapat dimuat. Silakan coba lagi.',
       );
     }
-    return demoIngredients;
+    return _catalogSnapshot();
   }
 
   @override
@@ -104,7 +141,9 @@ class DemoBowlRepository implements BowlRepository {
     }
     final canonical = <Ingredient>[];
     for (final selected in draft.ingredients) {
-      final matches = demoIngredients.where((item) => item.id == selected.id);
+      final matches = _catalogSnapshot().where(
+        (item) => item.id == selected.id,
+      );
       if (matches.length != 1) {
         throw const BowlFailure('Bahan tidak ditemukan.');
       }
@@ -131,6 +170,26 @@ class DemoBowlRepository implements BowlRepository {
       );
     }
     return List.unmodifiable(_orders);
+  }
+
+  @override
+  Future<Order?> findByDisplayId(String displayId) async {
+    final needle = OrderIdRules.normalize(displayId);
+    if (needle.isEmpty) return null;
+    for (final order in _orders) {
+      if (OrderIdRules.normalize(order.displayId) == needle) return order;
+    }
+    return null;
+  }
+
+  @override
+  Stream<Order> watchOrder(String orderId) async* {
+    final current = _findById(orderId);
+    if (current == null) {
+      throw const OrderFailure('Pesanan tidak ditemukan.');
+    }
+    yield current;
+    yield* _orderUpdates.stream.where((order) => order.id == orderId);
   }
 
   @override
@@ -162,9 +221,13 @@ class DemoBowlRepository implements BowlRepository {
     if (scenario == 'checkout-error' && _checkoutAttempts == 1) {
       throw const OrderFailure('Pesanan belum tersimpan. Silakan coba lagi.');
     }
+
+    final checked = <CartEntry>[];
     var total = 0;
+    final required = <String, int>{};
+    final names = <String, String>{};
     for (final entry in draft.items) {
-      final checked = BowlDraft(
+      final bowl = BowlDraft(
         ingredients: entry.bowl.ingredients
             .map((item) => _canonical(item.id))
             .toList(),
@@ -172,31 +235,108 @@ class DemoBowlRepository implements BowlRepository {
         note: entry.bowl.note,
       );
       try {
-        BowlValidation.validateDraft(checked);
+        BowlValidation.validateDraft(bowl);
       } on BowlFailure catch (error) {
         throw OrderFailure(error.message);
       }
-      total += checked.totalPrice;
+      for (final item in bowl.ingredients) {
+        required[item.id] = (required[item.id] ?? 0) + bowl.quantity;
+        names[item.id] = item.name;
+      }
+      total += bowl.totalPrice;
+      checked.add(CartEntry(id: entry.id, bowl: bowl));
     }
+
+    final orderPortions = checked.fold(
+      0,
+      (sum, entry) => sum + entry.bowl.quantity,
+    );
+
+    // Reservasi stok all-or-nothing: tidak ada potongan parsial.
+    for (final entry in required.entries) {
+      final available = _stock[entry.key] ?? 0;
+      if (available < entry.value) {
+        throw OrderFailure(
+          'Stok ${names[entry.key]} tidak cukup. Tersisa $available porsi.',
+        );
+      }
+    }
+    for (final entry in required.entries) {
+      _stock[entry.key] = (_stock[entry.key] ?? 0) - entry.value;
+    }
+
     final now = DateTime.now();
-    final stamp =
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final dayKey = '${now.year}-${now.month}-${now.day}';
+    if (_sequenceDay != dayKey) {
+      _sequenceDay = dayKey;
+      _dailySequence = 0;
+    }
+    _dailySequence++;
+
     final order = Order(
       id: 'order-${_orders.length + 1}',
-      displayId: 'DX-$stamp-${(_orders.length + 1).toString().padLeft(3, '0')}',
+      displayId: OrderIdRules.next(createdAt: now, sequence: _dailySequence),
       customerName: name,
       type: draft.type,
-      items: List.unmodifiable(draft.items),
+      items: List.unmodifiable(checked),
       totalPrice: total,
       status: OrderStatus.placed,
       createdAt: now,
+      estimatedMinutes: OrderEta.estimate(
+        // Saat pesanan masuk, antrean berisi pesanan ini sendiri.
+        activePortions: _activeQueuePortions() + orderPortions,
+        orderPortions: 0,
+        type: draft.type,
+      ),
     );
     _orders.insert(0, order);
+    _orderUpdates.add(order);
     return order;
   }
 
+  @override
+  Future<Order> advanceStatus(String orderId) async {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) {
+      throw const OrderFailure('Pesanan tidak ditemukan.');
+    }
+    final order = _orders[index];
+    if (order.cancelled) {
+      throw const OrderFailure('Pesanan sudah dibatalkan.');
+    }
+    final next = OrderStatusFlow.next(order.status);
+    if (next == null) {
+      throw const OrderFailure('Pesanan sudah selesai.');
+    }
+    final updated = order.copyWith(status: next);
+    _orders[index] = updated;
+    _orderUpdates.add(updated);
+    return updated;
+  }
+
+  @override
+  Future<Order> cancelOrder(String orderId) async {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) {
+      throw const OrderFailure('Pesanan tidak ditemukan.');
+    }
+    final order = _orders[index];
+    if (!OrderCancellation.canCancel(order)) {
+      throw const OrderFailure(OrderCancellation.rejectedMessage);
+    }
+    for (final entry in order.items) {
+      for (final item in entry.bowl.ingredients) {
+        _stock[item.id] = (_stock[item.id] ?? 0) + entry.bowl.quantity;
+      }
+    }
+    final updated = order.copyWith(cancelled: true);
+    _orders[index] = updated;
+    _orderUpdates.add(updated);
+    return updated;
+  }
+
   Ingredient _canonical(String id) {
-    final matches = demoIngredients.where((item) => item.id == id);
+    final matches = _catalogSnapshot().where((item) => item.id == id);
     if (matches.length != 1) {
       throw const BowlFailure('Bahan tidak ditemukan.');
     }

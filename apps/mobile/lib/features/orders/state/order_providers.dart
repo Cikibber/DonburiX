@@ -7,6 +7,11 @@ final orderListProvider = StreamNotifierProvider<OrderList, List<Order>>(
   OrderList.new,
 );
 
+/// Sinkronisasi status dapur ke pelanggan per pesanan.
+final orderStreamProvider = StreamProvider.family<Order, String>(
+  (ref, orderId) => ref.watch(bowlRepositoryProvider).watchOrder(orderId),
+);
+
 class OrderList extends StreamNotifier<List<Order>> {
   @override
   Stream<List<Order>> build() {

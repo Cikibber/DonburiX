@@ -30,6 +30,8 @@ class Order {
     required this.totalPrice,
     required this.status,
     required this.createdAt,
+    this.estimatedMinutes = 0,
+    this.cancelled = false,
   });
 
   final String id;
@@ -40,9 +42,28 @@ class Order {
   final int totalPrice;
   final OrderStatus status;
   final DateTime createdAt;
+  final int estimatedMinutes;
+  final bool cancelled;
 
   int get totalPortions =>
       items.fold(0, (sum, entry) => sum + entry.bowl.quantity);
+
+  Order copyWith({
+    OrderStatus? status,
+    int? estimatedMinutes,
+    bool? cancelled,
+  }) => Order(
+    id: id,
+    displayId: displayId,
+    customerName: customerName,
+    type: type,
+    items: items,
+    totalPrice: totalPrice,
+    status: status ?? this.status,
+    createdAt: createdAt,
+    estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+    cancelled: cancelled ?? this.cancelled,
+  );
 }
 
 class OrderFailure implements Exception {

@@ -2,15 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bowl_builder/domain/bowl_models.dart';
+import '../../bowl_builder/state/bowl_providers.dart';
 import '../domain/order_models.dart';
 import '../state/order_providers.dart';
 import 'order_detail_screen.dart';
 
-class OrdersScreen extends ConsumerWidget {
+class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends ConsumerState<OrdersScreen> {
+  final _lookupController = TextEditingController();
+
+  @override
+  void dispose() {
+    _lookupController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _lookup(String value) async {
+    final order = await ref.read(bowlRepositoryProvider).findByDisplayId(value);
+    if (!mounted) return;
+    if (order == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pesanan tidak ditemukan. Periksa nomor pesanan.'),
+        ),
+      );
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => OrderDetailScreen(order: order),
+        ),
+      );
+    }
+    _lookupController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final orders = ref.watch(orderListProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Pesanan')),
@@ -67,9 +100,25 @@ class OrdersScreen extends ConsumerWidget {
               )
             : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-                itemCount: items.length,
+                itemCount: items.length + 1,
                 itemBuilder: (context, index) {
-                  final order = items[index];
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: TextField(
+                        key: const Key('order-lookup-input'),
+                        controller: _lookupController,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: _lookup,
+                        decoration: const InputDecoration(
+                          hintText: 'Cari nomor pesanan',
+                          isDense: true,
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                    );
+                  }
+                  final order = items[index - 1];
                   return Card(
                     key: Key('order-${order.id}'),
                     margin: const EdgeInsets.only(bottom: 12),
@@ -86,7 +135,9 @@ class OrdersScreen extends ConsumerWidget {
                             formatRupiah(order.totalPrice),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text(order.status.label),
+                          Text(
+                            order.cancelled ? 'Dibatalkan' : order.status.label,
+                          ),
                         ],
                       ),
                       onTap: () {
