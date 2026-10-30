@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'bowl_builder_widget_test.dart' as shared;
+import 'test_support.dart';
 
 Future<void> mountDemo(
   WidgetTester tester, {
@@ -20,6 +21,7 @@ Future<void> mountDemo(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        signedIn,
         bowlRepositoryProvider.overrideWithValue(
           DemoBowlRepository(scenario: scenario),
         ),

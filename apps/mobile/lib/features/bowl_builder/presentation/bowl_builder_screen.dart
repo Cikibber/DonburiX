@@ -131,7 +131,7 @@ class _BowlBuilderScreenState extends ConsumerState<BowlBuilderScreen> {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Prototype tugas 4 · data lokal, belum terhubung ke dapur',
+                          'Pesanan tersimpan di perangkat dan langsung tampil di layar Dapur.',
                           style: TextStyle(fontSize: 12),
                         ),
                       ),

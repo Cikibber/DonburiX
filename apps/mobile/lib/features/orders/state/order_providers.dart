@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/state/session_provider.dart';
 import '../../bowl_builder/state/bowl_providers.dart';
+import '../domain/geofence.dart';
 import '../domain/order_models.dart';
 
 final orderListProvider = StreamNotifierProvider<OrderList, List<Order>>(
@@ -12,17 +14,36 @@ final orderStreamProvider = StreamProvider.family<Order, String>(
   (ref, orderId) => ref.watch(bowlRepositoryProvider).watchOrder(orderId),
 );
 
+/// Lokasi pelanggan untuk geofence. Demo memakai titik simulasi.
+final customerLocationProvider = Provider<GeoPoint>(
+  (ref) => Geofence.demoNearby,
+);
+
+/// Semua pesanan untuk layar dapur (KDS), diperbarui live.
+final kitchenOrdersProvider = StreamProvider<List<Order>>(
+  (ref) => ref.watch(bowlRepositoryProvider).watchOrders(),
+);
+
+/// Riwayat pelanggan: hanya pesanan milik akun yang sedang masuk.
 class OrderList extends StreamNotifier<List<Order>> {
   @override
   Stream<List<Order>> build() {
-    return ref.watch(bowlRepositoryProvider).watchOrders();
+    // Watch sesi agar riwayat dibangun ulang saat akun berganti.
+    ref.watch(sessionProvider);
+    return ref.watch(bowlRepositoryProvider).watchOrders().map(_mine);
+  }
+
+  List<Order> _mine(List<Order> orders) {
+    final email = ref.read(sessionProvider)?.email;
+    if (email == null) return orders;
+    return orders.where((order) => order.customerEmail == email).toList();
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
       final orders = await ref.read(bowlRepositoryProvider).latestOrders();
-      state = AsyncData(orders);
+      state = AsyncData(_mine(orders));
     } on OrderFailure catch (error) {
       state = AsyncError(error, StackTrace.current);
     } catch (_) {
@@ -96,6 +117,7 @@ class CheckoutFormNotifier extends Notifier<CheckoutFormState> {
           .createOrder(
             CheckoutDraft(
               customerName: state.customerName.trim(),
+              customerEmail: ref.read(sessionProvider)?.email ?? '',
               type: state.type,
               items: cart,
             ),
@@ -105,7 +127,8 @@ class CheckoutFormNotifier extends Notifier<CheckoutFormState> {
         ref.read(bowlBuilderProvider.notifier).removeFromCart(entry.id);
       }
       state = state.copyWith(isSubmitting: false);
-      ref.read(orderListProvider.notifier).refresh();
+      // Stok berubah setelah reservasi; muat ulang katalog builder.
+      ref.invalidate(ingredientCatalogProvider);
       return order;
     } on OrderFailure catch (error) {
       if (ref.mounted) {

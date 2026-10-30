@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/bowl_models.dart';
 import '../domain/bowl_repository.dart';
 import '../domain/bowl_validation.dart';
+import '../../orders/domain/geofence.dart';
 import '../../orders/domain/order_models.dart';
 import '../../orders/domain/order_rules.dart';
 
@@ -73,9 +77,16 @@ const demoIngredients = [
 ];
 
 class DemoBowlRepository implements BowlRepository {
-  DemoBowlRepository({this.scenario = 'success'});
+  DemoBowlRepository({this.scenario = 'success', this.prefs}) {
+    _restore();
+  }
+
+  static const storageKey = 'donburix.kitchen.v1';
 
   final String scenario;
+
+  /// Penyimpanan lokal pesanan, stok, dan nomor urut. Null = memori saja.
+  final SharedPreferences? prefs;
   final List<CartEntry> _cart = [];
   final List<Order> _orders = [];
 
@@ -93,6 +104,45 @@ class DemoBowlRepository implements BowlRepository {
   int _checkoutAttempts = 0;
 
   void dispose() => _orderUpdates.close();
+
+  void _restore() {
+    final raw = prefs?.getString(storageKey);
+    if (raw == null) return;
+    try {
+      final json = jsonDecode(raw) as Map<String, Object?>;
+      final orders = [
+        for (final order in json['orders']! as List)
+          Order.fromJson(order as Map<String, Object?>),
+      ];
+      final stock = (json['stock']! as Map).cast<String, int>();
+      _orders
+        ..clear()
+        ..addAll(orders);
+      _stock.addAll(stock);
+      _sequenceDay = json['sequenceDay'] as String?;
+      _dailySequence = json['dailySequence'] as int? ?? 0;
+    } catch (_) {
+      // Data rusak: mulai dari kondisi awal, jangan crash.
+      _orders.clear();
+    }
+  }
+
+  void _save() {
+    prefs?.setString(
+      storageKey,
+      jsonEncode({
+        'orders': [for (final order in _orders) order.toJson()],
+        'stock': _stock,
+        'sequenceDay': _sequenceDay,
+        'dailySequence': _dailySequence,
+      }),
+    );
+  }
+
+  void _publish(Order order) {
+    _save();
+    _orderUpdates.add(order);
+  }
 
   List<Ingredient> _catalogSnapshot() => [
     for (final item in demoIngredients)
@@ -205,6 +255,7 @@ class DemoBowlRepository implements BowlRepository {
       );
     }
     yield List.unmodifiable(_orders);
+    yield* _orderUpdates.stream.map((_) => List.unmodifiable(_orders));
   }
 
   @override
@@ -277,6 +328,7 @@ class DemoBowlRepository implements BowlRepository {
       id: 'order-${_orders.length + 1}',
       displayId: OrderIdRules.next(createdAt: now, sequence: _dailySequence),
       customerName: name,
+      customerEmail: draft.customerEmail,
       type: draft.type,
       items: List.unmodifiable(checked),
       totalPrice: total,
@@ -290,7 +342,7 @@ class DemoBowlRepository implements BowlRepository {
       ),
     );
     _orders.insert(0, order);
-    _orderUpdates.add(order);
+    _publish(order);
     return order;
   }
 
@@ -310,7 +362,7 @@ class DemoBowlRepository implements BowlRepository {
     }
     final updated = order.copyWith(status: next);
     _orders[index] = updated;
-    _orderUpdates.add(updated);
+    _publish(updated);
     return updated;
   }
 
@@ -331,8 +383,54 @@ class DemoBowlRepository implements BowlRepository {
     }
     final updated = order.copyWith(cancelled: true);
     _orders[index] = updated;
-    _orderUpdates.add(updated);
+    _publish(updated);
     return updated;
+  }
+
+  @override
+  Future<Order> markArrived(String orderId, GeoPoint location) async {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) {
+      throw const OrderFailure('Pesanan tidak ditemukan.');
+    }
+    final order = _orders[index];
+    if (order.cancelled) {
+      throw const OrderFailure('Pesanan sudah dibatalkan.');
+    }
+    if (order.type != OrderType.takeaway) {
+      throw const OrderFailure('Sinyal kedatangan hanya untuk takeaway.');
+    }
+    if (order.arrived || order.status != OrderStatus.placed) {
+      throw const OrderFailure('Dapur sudah menyiapkan pesanan ini.');
+    }
+    final distance = Geofence.distanceMeters(Geofence.store, location);
+    if (distance > Geofence.radiusMeters) {
+      throw OrderFailure(
+        'Anda masih ${distance.round()} m dari gerai. '
+        'Dapur mulai menyiapkan saat Anda dalam radius '
+        '${Geofence.radiusMeters.round()} m.',
+      );
+    }
+    // Freshness trigger: dapur mulai merakit saat pelanggan mendekat.
+    final updated = order.copyWith(
+      arrived: true,
+      status: OrderStatus.preparing,
+    );
+    _orders[index] = updated;
+    _publish(updated);
+    return updated;
+  }
+
+  @override
+  Future<void> restock(String ingredientId, int amount) async {
+    if (!_stock.containsKey(ingredientId)) {
+      throw const BowlFailure('Bahan tidak ditemukan.');
+    }
+    if (amount < 1 || amount > 100) {
+      throw const BowlFailure('Jumlah restok harus 1 sampai 100.');
+    }
+    _stock[ingredientId] = _stock[ingredientId]! + amount;
+    _save();
   }
 
   Ingredient _canonical(String id) {

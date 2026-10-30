@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/profile_screen.dart';
+import 'features/auth/state/session_provider.dart';
 import 'features/bowl_builder/presentation/bowl_builder_screen.dart';
+import 'features/kitchen/presentation/kitchen_screen.dart';
 import 'features/orders/presentation/orders_screen.dart';
 
 class DonburiXApp extends StatelessWidget {
@@ -34,8 +39,18 @@ class DonburiXApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const _HomeShell(),
+      home: const _AuthGate(),
     );
+  }
+}
+
+class _AuthGate extends ConsumerWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final signedIn = ref.watch(sessionProvider) != null;
+    return signedIn ? const _HomeShell() : const LoginScreen();
   }
 }
 
@@ -54,7 +69,12 @@ class _HomeShellState extends State<_HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [BowlBuilderScreen(), OrdersScreen()],
+        children: const [
+          BowlBuilderScreen(),
+          OrdersScreen(),
+          KitchenScreen(),
+          ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -69,6 +89,16 @@ class _HomeShellState extends State<_HomeShell> {
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Pesanan',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.soup_kitchen_outlined),
+            selectedIcon: Icon(Icons.soup_kitchen),
+            label: 'Dapur',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
           ),
         ],
       ),

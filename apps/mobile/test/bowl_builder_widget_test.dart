@@ -5,10 +5,13 @@ import 'package:donburix/features/bowl_builder/data/demo_bowl_repository.dart';
 import 'package:donburix/features/bowl_builder/domain/bowl_models.dart';
 import 'package:donburix/features/bowl_builder/domain/bowl_repository.dart';
 import 'package:donburix/features/bowl_builder/state/bowl_providers.dart';
+import 'package:donburix/features/orders/domain/geofence.dart';
 import 'package:donburix/features/orders/domain/order_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'test_support.dart';
 
 class ControlledBowlRepository implements BowlRepository {
   final loading = Completer<List<Ingredient>>();
@@ -56,6 +59,14 @@ class ControlledBowlRepository implements BowlRepository {
 
   @override
   Stream<List<Order>> watchOrders() => Stream.value(const []);
+
+  @override
+  Future<Order> markArrived(String orderId, GeoPoint location) {
+    throw UnimplementedError('Controlled repository tidak dipakai untuk order');
+  }
+
+  @override
+  Future<void> restock(String ingredientId, int amount) async {}
 }
 
 Future<void> mount(
@@ -68,7 +79,10 @@ Future<void> mount(
   addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [bowlRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        signedIn,
+        bowlRepositoryProvider.overrideWithValue(repository),
+      ],
       child: const DonburiXApp(),
     ),
   );

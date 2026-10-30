@@ -24,6 +24,21 @@ class Ingredient {
   final IngredientCategory category;
   final int price;
   final int availableStock;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'category': category.name,
+    'price': price,
+  };
+
+  factory Ingredient.fromJson(Map<String, Object?> json) => Ingredient(
+    id: json['id']! as String,
+    name: json['name']! as String,
+    category: IngredientCategory.values.byName(json['category']! as String),
+    price: json['price']! as int,
+    availableStock: 0,
+  );
 }
 
 class BowlDraft {
@@ -46,6 +61,25 @@ class CartEntry {
 
   final String id;
   final BowlDraft bowl;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'quantity': bowl.quantity,
+    'note': bowl.note,
+    'ingredients': [for (final item in bowl.ingredients) item.toJson()],
+  };
+
+  factory CartEntry.fromJson(Map<String, Object?> json) => CartEntry(
+    id: json['id']! as String,
+    bowl: BowlDraft(
+      ingredients: [
+        for (final item in json['ingredients']! as List)
+          Ingredient.fromJson(item as Map<String, Object?>),
+      ],
+      quantity: json['quantity']! as int,
+      note: json['note']! as String,
+    ),
+  );
 }
 
 class BowlFailure implements Exception {

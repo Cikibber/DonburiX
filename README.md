@@ -80,3 +80,16 @@ Verifikasi lokal terbaru: analyze berhasil dan **20 test lulus**.
 Build Flutter Web berhasil pada implementasi awal.
 Penyempurnaan P4 menambahkan test batas input, pemulihan error submit, dan keamanan lifecycle asynchronous.
 Lihat [catatan progres penyempurnaan P4](docs/tugas4/PROGRESS.md).
+
+---
+
+## 8. Tugas 7: MVP Lengkap
+
+MVP kini mencakup login & profil, Bowl Builder, keranjang, checkout, estimasi saji dinamis,
+geofence freshness trigger (radius 500 m), layar Dapur (KDS) dengan restok, dan penyimpanan lokal.
+
+* [Cara menjalankan (HowToRun.md)](docs/tugas7/HowToRun.md)
+* [Checklist fitur dan status test (checklist_mvp.md)](docs/tugas7/checklist_mvp.md)
+* [Video demo (demo.mp4)](docs/tugas7/demo.mp4)
+
+Verifikasi terbaru: analyze tanpa temuan, **72 test lulus**, build web berhasil.

@@ -24,10 +24,12 @@ class OrderDetailScreen extends ConsumerWidget {
       messenger?.showSnackBar(SnackBar(content: Text(message)));
     }
 
-    Future<void> advance() async {
+    Future<void> arrive() async {
       try {
-        await ref.read(bowlRepositoryProvider).advanceStatus(live.id);
-        ref.read(orderListProvider.notifier).refresh();
+        await ref
+            .read(bowlRepositoryProvider)
+            .markArrived(live.id, ref.read(customerLocationProvider));
+        toast('Kedatangan terdeteksi. Dapur mulai menyiapkan pesanan.');
       } on OrderFailure catch (error) {
         toast(error.message);
       }
@@ -36,7 +38,7 @@ class OrderDetailScreen extends ConsumerWidget {
     Future<void> cancel() async {
       try {
         await ref.read(bowlRepositoryProvider).cancelOrder(live.id);
-        ref.read(orderListProvider.notifier).refresh();
+        ref.invalidate(ingredientCatalogProvider);
         toast('Pesanan dibatalkan. Stok dikembalikan.');
       } on OrderFailure catch (error) {
         toast(error.message);
@@ -98,14 +100,19 @@ class OrderDetailScreen extends ConsumerWidget {
             ),
           if (!live.cancelled) ...[
             const SizedBox(height: 24),
-            if (live.status != OrderStatus.completed)
+            if (live.type == OrderType.takeaway &&
+                !live.arrived &&
+                live.status == OrderStatus.placed)
               FilledButton.icon(
-                key: const Key('advance-status-button'),
-                onPressed: advance,
-                icon: const Icon(Icons.soup_kitchen_outlined),
-                label: Text(
-                  'Simulasikan dapur → ${OrderStatusFlow.next(live.status)?.label ?? '-'}',
-                ),
+                key: const Key('arrival-button'),
+                onPressed: arrive,
+                icon: const Icon(Icons.near_me_outlined),
+                label: const Text('Saya Sudah Tiba'),
+              ),
+            if (live.arrived)
+              const Text(
+                key: Key('arrival-confirmed'),
+                'Kedatangan terdeteksi dalam radius 500 m gerai.',
               ),
             if (OrderCancellation.canCancel(live)) ...[
               const SizedBox(height: 12),
@@ -118,7 +125,7 @@ class OrderDetailScreen extends ConsumerWidget {
             ],
             const SizedBox(height: 16),
             const Text(
-              'Sinkronisasi status dapur aktif; layar ini mengikuti perubahan otomatis.',
+              'Status mengikuti layar dapur secara otomatis. Untuk takeaway, dapur mulai merakit saat Anda berada dalam radius 500 m.',
               style: TextStyle(fontSize: 12, color: Colors.black54),
             ),
           ],

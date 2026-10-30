@@ -1,14 +1,19 @@
 name: Flutter feature checks
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/flutter.yml'
+      - 'scripts/verify.sh'
+      - 'scripts/verify.ps1'
   pull_request:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/flutter.yml'
+      - 'scripts/verify.sh'
+      - 'scripts/verify.ps1'
 
 permissions:
   contents: read

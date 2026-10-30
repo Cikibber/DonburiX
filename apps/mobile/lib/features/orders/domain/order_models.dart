@@ -32,6 +32,8 @@ class Order {
     required this.createdAt,
     this.estimatedMinutes = 0,
     this.cancelled = false,
+    this.customerEmail = '',
+    this.arrived = false,
   });
 
   final String id;
@@ -44,6 +46,10 @@ class Order {
   final DateTime createdAt;
   final int estimatedMinutes;
   final bool cancelled;
+  final String customerEmail;
+
+  /// Pelanggan takeaway sudah masuk radius geofence gerai.
+  final bool arrived;
 
   int get totalPortions =>
       items.fold(0, (sum, entry) => sum + entry.bowl.quantity);
@@ -52,6 +58,7 @@ class Order {
     OrderStatus? status,
     int? estimatedMinutes,
     bool? cancelled,
+    bool? arrived,
   }) => Order(
     id: id,
     displayId: displayId,
@@ -63,6 +70,41 @@ class Order {
     createdAt: createdAt,
     estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
     cancelled: cancelled ?? this.cancelled,
+    customerEmail: customerEmail,
+    arrived: arrived ?? this.arrived,
+  );
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'displayId': displayId,
+    'customerName': customerName,
+    'customerEmail': customerEmail,
+    'type': type.name,
+    'items': [for (final entry in items) entry.toJson()],
+    'totalPrice': totalPrice,
+    'status': status.name,
+    'createdAt': createdAt.toIso8601String(),
+    'estimatedMinutes': estimatedMinutes,
+    'cancelled': cancelled,
+    'arrived': arrived,
+  };
+
+  factory Order.fromJson(Map<String, Object?> json) => Order(
+    id: json['id']! as String,
+    displayId: json['displayId']! as String,
+    customerName: json['customerName']! as String,
+    customerEmail: json['customerEmail'] as String? ?? '',
+    type: OrderType.values.byName(json['type']! as String),
+    items: List.unmodifiable([
+      for (final entry in json['items']! as List)
+        CartEntry.fromJson(entry as Map<String, Object?>),
+    ]),
+    totalPrice: json['totalPrice']! as int,
+    status: OrderStatus.values.byName(json['status']! as String),
+    createdAt: DateTime.parse(json['createdAt']! as String),
+    estimatedMinutes: json['estimatedMinutes'] as int? ?? 0,
+    cancelled: json['cancelled'] as bool? ?? false,
+    arrived: json['arrived'] as bool? ?? false,
   );
 }
 
@@ -77,9 +119,11 @@ class CheckoutDraft {
     required this.customerName,
     required this.type,
     required this.items,
+    this.customerEmail = '',
   });
 
   final String customerName;
+  final String customerEmail;
   final OrderType type;
   final List<CartEntry> items;
 }
