@@ -93,3 +93,95 @@ geofence freshness trigger (radius 500 m), layar Dapur (KDS) dengan restok, dan 
 * [Video demo (demo.mp4)](docs/tugas7/demo.mp4)
 
 Verifikasi terbaru: analyze tanpa temuan, **72 test lulus**, build web berhasil.
+
+---
+
+## 9. Instalasi Ulang dan Akses Aplikasi (Tugas 8)
+
+### Akses tanpa instalasi
+
+| Paket | Lokasi |
+| --- | --- |
+| Demo web | <https://cikibber.github.io/DonburiX/> |
+| APK Android demo | Tab [Actions](https://github.com/Cikibber/DonburiX/actions/workflows/flutter.yml), run terbaru yang berhasil, artifact `donburix-demo-apk` (perlu login GitHub) |
+| Video alur | [`docs/tugas7/demo.mp4`](docs/tugas7/demo.mp4) |
+
+Masuk dengan nama dan email apa saja. Tab **Dapur** memakai PIN demo `4826`.
+PIN ini sengaja dipublikasikan untuk penilaian dan bukan kredensial produksi.
+Data tersimpan hanya di browser atau perangkat Anda.
+
+### Prasyarat
+
+| Alat | Versi |
+| --- | --- |
+| Git | Versi terbaru |
+| Flutter | 3.44.1 (channel stable), sudah termasuk Dart 3.12.1 |
+| Google Chrome | Untuk Flutter Web |
+| Bash | Untuk `scripts/build-web.sh`. Di Windows gunakan Git Bash |
+| Android SDK dan Java 17 | Opsional, hanya untuk build APK |
+
+### Instalasi dari clone bersih
+
+```sh
+git clone https://github.com/Cikibber/DonburiX.git
+cd DonburiX/apps/mobile
+flutter pub get --enforce-lockfile
+flutter run -d chrome --dart-define=KDS_PIN=4826
+```
+
+Tanpa `KDS_PIN`, aplikasi tetap berjalan tetapi layar Dapur selalu terkunci.
+
+### Pemeriksaan
+
+Jalankan dari `apps/mobile`:
+
+```sh
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
+flutter test --coverage
+```
+
+Hasil yang diharapkan: analyze tanpa temuan dan **103 test lulus**.
+
+### Build dan deployment
+
+Jalankan dari root repo:
+
+```sh
+# Web release dengan CSP, hasil di apps/mobile/build/web
+KDS_PIN=4826 BASE_HREF=/ ./scripts/build-web.sh
+python -m http.server 8080 --directory apps/mobile/build/web
+
+# APK demo
+cd apps/mobile && flutter build apk --release --dart-define=KDS_PIN=4826
+```
+
+Deployment ke GitHub Pages berjalan otomatis lewat
+[`deploy-web.yml`](.github/workflows/deploy-web.yml) setiap ada perubahan aplikasi di `main`.
+Workflow menjalankan test dulu, sehingga build yang gagal test tidak ter-deploy.
+Untuk deploy manual: `gh workflow run deploy-web.yml`.
+
+Pada fork, aktifkan **Settings > Pages > Source: GitHub Actions**, lalu sesuaikan
+`BASE_HREF` di workflow dengan nama repo.
+
+### Menghapus data dan mengulang dari awal
+
+* Web: hapus data situs di browser.
+* Android: hapus data aplikasi di pengaturan.
+* Sumber: hapus folder clone, lalu ulangi langkah instalasi.
+
+### Masalah umum
+
+| Gejala | Penyebab | Solusi |
+| --- | --- | --- |
+| Dapur menampilkan "belum dikonfigurasi" | Build tanpa `KDS_PIN` | Tambahkan `--dart-define=KDS_PIN=4826` |
+| Dapur "Terlalu banyak percobaan" | Lima PIN salah | Tunggu 1 menit atau muat ulang halaman |
+| `--enforce-lockfile` gagal | Versi Flutter berbeda | Pakai Flutter 3.44.1 |
+| Halaman kosong saat disajikan lokal | `BASE_HREF` tidak cocok dengan alamat | Build dengan `BASE_HREF=/` |
+| `?scenario=` tidak berpengaruh | Build release mengabaikan hook demo | Pakai `flutter run` |
+
+### Dokumen Tugas 8
+
+* [Hasil uji keamanan dan change log](docs/tugas8/security_test_results.md)
+* [Contoh log keamanan, penyebab, dan remediasi](docs/tugas8/security_logs.md)
+* [Laporan clone bersih, PR, build, dan deployment](docs/tugas8/fresh_clone_report.md)

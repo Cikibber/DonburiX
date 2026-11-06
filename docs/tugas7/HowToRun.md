@@ -23,14 +23,16 @@ Semua perintah dijalankan dari folder `apps/mobile`.
 ```sh
 cd apps/mobile
 flutter pub get
-flutter run -d chrome
+flutter run -d chrome --dart-define=KDS_PIN=4826
 ```
 
 Android (emulator/perangkat terhubung):
 
 ```sh
-flutter run
+flutter run --dart-define=KDS_PIN=4826
 ```
+
+Sejak Tugas 8 tab **Dapur** meminta PIN staf (`KDS_PIN`, demo: `4826`).
 
 Data pesanan, stok, dan sesi login tersimpan di perangkat (`shared_preferences`;
 di web memakai `localStorage`). Untuk mulai dari data kosong, tekan **Keluar**
@@ -74,6 +76,9 @@ data bersih (tidak membaca data tersimpan).
 | `?location=far` | Lokasi simulasi 2,2 km: **Saya Sudah Tiba** ditolak |
 
 Android: `flutter run --dart-define=DEMO_SCENARIO=error`.
+
+Query di atas hanya aktif pada build non-release (`flutter run`). Build release
+dan situs yang di-deploy mengabaikannya.
 
 ## Menjalankan pengujian
 

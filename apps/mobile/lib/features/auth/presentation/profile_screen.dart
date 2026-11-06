@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bowl_builder/state/bowl_providers.dart';
+import '../../kitchen/state/kds_access.dart';
 import '../../orders/state/order_providers.dart';
 import '../state/session_provider.dart';
 
@@ -44,6 +45,7 @@ class ProfileScreen extends ConsumerWidget {
               // Keranjang dan form milik akun lama tidak ikut terbawa.
               ref.invalidate(bowlBuilderProvider);
               ref.invalidate(checkoutFormProvider);
+              ref.read(kdsAccessProvider.notifier).lock();
               ref.read(sessionProvider.notifier).logout();
             },
             icon: const Icon(Icons.logout),

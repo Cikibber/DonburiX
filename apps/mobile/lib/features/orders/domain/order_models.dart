@@ -129,8 +129,8 @@ class CheckoutDraft {
 }
 
 String? validateCustomerName(String? value) {
-  if ((value?.trim().isEmpty ?? true)) {
-    return 'Nama pemesan wajib diisi.';
-  }
+  final name = value?.trim() ?? '';
+  if (name.isEmpty) return 'Nama pemesan wajib diisi.';
+  if (name.length > 40) return 'Nama pemesan maksimal 40 karakter.';
   return null;
 }

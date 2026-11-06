@@ -5,6 +5,9 @@ class GeoPoint {
 
   final double latitude;
   final double longitude;
+
+  /// NaN, tak hingga, dan koordinat di luar rentang bumi tidak valid.
+  bool get isValid => latitude.abs() <= 90 && longitude.abs() <= 180;
 }
 
 /// Geofenced Freshness Trigger: radius 500 m dari satu gerai.
@@ -32,5 +35,5 @@ class Geofence {
   }
 
   static bool contains(GeoPoint point) =>
-      distanceMeters(store, point) <= radiusMeters;
+      point.isValid && distanceMeters(store, point) <= radiusMeters;
 }
