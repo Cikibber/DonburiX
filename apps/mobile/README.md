@@ -10,7 +10,7 @@ Jalankan perintah berikut dari folder `apps/mobile`:
 
 ```sh
 flutter pub get
-flutter run -d chrome
+flutter run -d chrome --dart-define=KDS_PIN=4826
 ```
 
 Untuk Android, jalankan `flutter run` dengan emulator atau perangkat Android yang terhubung.
@@ -30,7 +30,7 @@ Versi Riverpod terpasang: **3.4.3**, dikunci dalam `pubspec.lock`.
 
 ## Reproduksi kondisi UI
 
-Pada web, tambahkan query pada URL aplikasi yang sudah berjalan:
+Pada web, tambahkan query pada URL aplikasi yang sudah berjalan (hanya build non-release):
 
 | Query | Kondisi |
 | --- | --- |
