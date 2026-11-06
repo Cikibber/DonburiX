@@ -37,5 +37,35 @@ hasil clone memastikannya.
 
 ## 3. Deployment
 
-Hasil deployment dicatat setelah PR digabung ke `main`, karena environment
-GitHub Pages hanya menerima deploy dari branch utama.
+PR #1 digabung ke `main` sebagai commit `b6f55af`, lalu workflow berjalan otomatis.
+
+| Item | Hasil |
+| --- | --- |
+| Alamat | <https://cikibber.github.io/DonburiX/> |
+| Deploy | [run 42151006398](https://github.com/Cikibber/DonburiX/actions/runs/42151006398), job `build` (termasuk test) dan `deploy` berhasil |
+| CI di `main` | [run 42151006374](https://github.com/Cikibber/DonburiX/actions/runs/42151006374), `bowl-builder`, `security-scan`, `demo-apk` berhasil |
+| Respons situs | `HTTP 200`, `Strict-Transport-Security: max-age=31556952` |
+| CSP | Terpasang lewat tag meta. GitHub Pages tidak mengirim CSP sebagai header |
+| Uji browser pada situs langsung | **17/17 lulus**, 0 pelanggaran CSP, 0 error konsol |
+| Origin eksternal | Hanya `https://fonts.gstatic.com` |
+
+## 4. Clone bersih dari `main` setelah merge
+
+Clone baru, commit `b6f55af`, 02:39:07 sampai 02:40:36 UTC.
+
+| Langkah | Hasil |
+| --- | --- |
+| `git clone https://github.com/Cikibber/DonburiX.git` | Berhasil |
+| `flutter pub get --enforce-lockfile` | Berhasil |
+| `dart format --output=none --set-exit-if-changed lib test` | Tanpa perubahan |
+| `flutter analyze` | No issues found |
+| `flutter test --coverage` | **103 test lulus**, coverage 94,2% (1186/1259 baris) |
+| `KDS_PIN=4826 BASE_HREF=/DonburiX/ bash scripts/build-web.sh` | Berhasil |
+| `git status --short` setelah semua langkah | 0 file berubah |
+
+## Kesimpulan
+
+Clone, pull request, instalasi, eksekusi, build, dan deployment berjalan, dan
+semua unit test lulus.
+
+Yang belum diuji: APK belum dipasang di perangkat atau emulator.
