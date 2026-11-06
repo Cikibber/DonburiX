@@ -16,6 +16,7 @@ class Customer {
   static String? validateEmail(String? value) {
     final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Email wajib diisi.';
+    if (email.length > 254) return 'Email maksimal 254 karakter.';
     if (!_emailPattern.hasMatch(email)) return 'Format email tidak valid.';
     return null;
   }

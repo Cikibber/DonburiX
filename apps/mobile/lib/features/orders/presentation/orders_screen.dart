@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/state/session_provider.dart';
 import '../../bowl_builder/domain/bowl_models.dart';
 import '../../bowl_builder/state/bowl_providers.dart';
 import '../domain/order_models.dart';
@@ -24,7 +25,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   }
 
   Future<void> _lookup(String value) async {
-    final order = await ref.read(bowlRepositoryProvider).findByDisplayId(value);
+    final order = await ref
+        .read(bowlRepositoryProvider)
+        .findByDisplayId(
+          value,
+          actorEmail: ref.read(sessionProvider)?.email ?? '',
+        );
     if (!mounted) return;
     if (order == null) {
       ScaffoldMessenger.of(context).showSnackBar(

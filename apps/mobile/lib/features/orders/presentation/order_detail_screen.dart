@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/state/session_provider.dart';
 import '../../bowl_builder/domain/bowl_models.dart';
 import '../../bowl_builder/state/bowl_providers.dart';
 import '../domain/order_models.dart';
@@ -19,6 +20,7 @@ class OrderDetailScreen extends ConsumerWidget {
         ? -1
         : OrderStatus.values.indexOf(live.status);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final actorEmail = ref.read(sessionProvider)?.email ?? '';
 
     void toast(String message) {
       messenger?.showSnackBar(SnackBar(content: Text(message)));
@@ -28,7 +30,11 @@ class OrderDetailScreen extends ConsumerWidget {
       try {
         await ref
             .read(bowlRepositoryProvider)
-            .markArrived(live.id, ref.read(customerLocationProvider));
+            .markArrived(
+              live.id,
+              ref.read(customerLocationProvider),
+              actorEmail: actorEmail,
+            );
         toast('Kedatangan terdeteksi. Dapur mulai menyiapkan pesanan.');
       } on OrderFailure catch (error) {
         toast(error.message);
@@ -37,7 +43,9 @@ class OrderDetailScreen extends ConsumerWidget {
 
     Future<void> cancel() async {
       try {
-        await ref.read(bowlRepositoryProvider).cancelOrder(live.id);
+        await ref
+            .read(bowlRepositoryProvider)
+            .cancelOrder(live.id, actorEmail: actorEmail);
         ref.invalidate(ingredientCatalogProvider);
         toast('Pesanan dibatalkan. Stok dikembalikan.');
       } on OrderFailure catch (error) {

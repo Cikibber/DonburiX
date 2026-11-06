@@ -6,10 +6,78 @@ import '../../bowl_builder/state/bowl_providers.dart';
 import '../../orders/domain/order_models.dart';
 import '../../orders/domain/order_rules.dart';
 import '../../orders/state/order_providers.dart';
+import '../state/kds_access.dart';
 
 /// Kitchen Display System: antrean aktif dan stok bahan untuk staf dapur.
 class KitchenScreen extends ConsumerWidget {
   const KitchenScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(kdsAccessProvider).unlocked
+        ? const _KitchenBoard()
+        : const _KdsGate();
+  }
+}
+
+class _KdsGate extends ConsumerStatefulWidget {
+  const _KdsGate();
+
+  @override
+  ConsumerState<_KdsGate> createState() => _KdsGateState();
+}
+
+class _KdsGateState extends ConsumerState<_KdsGate> {
+  final _pin = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _pin.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final error = ref.read(kdsAccessProvider.notifier).unlock(_pin.text);
+    _pin.clear();
+    setState(() => _error = error);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Dapur (KDS)')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+        children: [
+          const Text('Layar ini khusus staf dapur. Masukkan PIN staf.'),
+          const SizedBox(height: 16),
+          TextField(
+            key: const Key('kds-pin'),
+            controller: _pin,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 12,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              labelText: 'PIN staf',
+              errorText: _error,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            key: const Key('kds-unlock'),
+            onPressed: _submit,
+            child: const Text('Buka Layar Dapur'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KitchenBoard extends ConsumerWidget {
+  const _KitchenBoard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +97,17 @@ class KitchenScreen extends ConsumerWidget {
 
     final repository = ref.read(bowlRepositoryProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Dapur (KDS)')),
+      appBar: AppBar(
+        title: const Text('Dapur (KDS)'),
+        actions: [
+          IconButton(
+            key: const Key('kds-lock'),
+            tooltip: 'Kunci layar dapur',
+            onPressed: () => ref.read(kdsAccessProvider.notifier).lock(),
+            icon: const Icon(Icons.lock_outline),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
         children: [

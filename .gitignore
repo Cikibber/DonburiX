@@ -1,2 +1,3 @@
 .playwright-mcp/
 apps/mobile/coverage/
+.env*

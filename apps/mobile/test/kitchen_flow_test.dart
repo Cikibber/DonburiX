@@ -48,6 +48,7 @@ Future<void> _mount(
     ProviderScope(
       overrides: [
         signedIn,
+        kdsUnlocked,
         bowlRepositoryProvider.overrideWithValue(repository),
         customerLocationProvider.overrideWithValue(location),
       ],

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/security_log.dart';
 import '../domain/bowl_models.dart';
 import '../domain/bowl_repository.dart';
 import '../domain/bowl_validation.dart';
@@ -114,16 +115,29 @@ class DemoBowlRepository implements BowlRepository {
         for (final order in json['orders']! as List)
           Order.fromJson(order as Map<String, Object?>),
       ];
-      final stock = (json['stock']! as Map).cast<String, int>();
-      _orders
-        ..clear()
-        ..addAll(orders);
+      final stock = <String, int>{};
+      for (final entry in (json['stock']! as Map).entries) {
+        final amount = entry.value as int;
+        if (amount < 0) throw const FormatException('Stok negatif.');
+        stock[entry.key as String] = amount;
+      }
+      final sequence = json['dailySequence'] as int? ?? 0;
+      if (sequence < 0) throw const FormatException('Nomor urut negatif.');
+      final sequenceDay = json['sequenceDay'] as String?;
+      // Terapkan setelah semua lolos agar data rusak tidak masuk sebagian.
+      _orders.addAll(orders);
       _stock.addAll(stock);
-      _sequenceDay = json['sequenceDay'] as String?;
-      _dailySequence = json['dailySequence'] as int? ?? 0;
-    } catch (_) {
+      _sequenceDay = sequenceDay;
+      _dailySequence = sequence;
+    } catch (error) {
       // Data rusak: mulai dari kondisi awal, jangan crash.
-      _orders.clear();
+      logSecurityEvent(
+        'storage.corrupt_reset',
+        fields: {
+          'store': 'kitchen',
+          'cause': error is FormatException ? 'invalid_format' : 'invalid_type',
+        },
+      );
     }
   }
 
@@ -160,6 +174,23 @@ class DemoBowlRepository implements BowlRepository {
       if (order.id == orderId) return order;
     }
     return null;
+  }
+
+  /// Pesanan orang lain dijawab sama dengan "tidak ditemukan" agar
+  /// keberadaannya tidak bocor. [actorEmail] null = staf/sistem.
+  int _indexFor(String orderId, String? actorEmail, String action) {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) {
+      throw const OrderFailure('Pesanan tidak ditemukan.');
+    }
+    if (actorEmail != null && _orders[index].customerEmail != actorEmail) {
+      logSecurityEvent(
+        'order.access_denied',
+        fields: {'action': action, 'order': _orders[index].displayId},
+      );
+      throw const OrderFailure('Pesanan tidak ditemukan.');
+    }
+    return index;
   }
 
   int _activeQueuePortions() => _orders.fold(0, (sum, order) {
@@ -223,11 +254,19 @@ class DemoBowlRepository implements BowlRepository {
   }
 
   @override
-  Future<Order?> findByDisplayId(String displayId) async {
+  Future<Order?> findByDisplayId(String displayId, {String? actorEmail}) async {
     final needle = OrderIdRules.normalize(displayId);
     if (needle.isEmpty) return null;
     for (final order in _orders) {
-      if (OrderIdRules.normalize(order.displayId) == needle) return order;
+      if (OrderIdRules.normalize(order.displayId) != needle) continue;
+      if (actorEmail != null && order.customerEmail != actorEmail) {
+        logSecurityEvent(
+          'order.access_denied',
+          fields: {'action': 'lookup', 'order': order.displayId},
+        );
+        return null;
+      }
+      return order;
     }
     return null;
   }
@@ -261,10 +300,9 @@ class DemoBowlRepository implements BowlRepository {
   @override
   Future<Order> createOrder(CheckoutDraft draft) async {
     _checkoutAttempts++;
+    final nameError = validateCustomerName(draft.customerName);
+    if (nameError != null) throw OrderFailure(nameError);
     final name = draft.customerName.trim();
-    if (name.isEmpty) {
-      throw const OrderFailure('Nama pemesan wajib diisi.');
-    }
     if (draft.items.isEmpty) {
       throw const OrderFailure('Keranjang masih kosong.');
     }
@@ -367,11 +405,8 @@ class DemoBowlRepository implements BowlRepository {
   }
 
   @override
-  Future<Order> cancelOrder(String orderId) async {
-    final index = _orders.indexWhere((order) => order.id == orderId);
-    if (index == -1) {
-      throw const OrderFailure('Pesanan tidak ditemukan.');
-    }
+  Future<Order> cancelOrder(String orderId, {String? actorEmail}) async {
+    final index = _indexFor(orderId, actorEmail, 'cancel');
     final order = _orders[index];
     if (!OrderCancellation.canCancel(order)) {
       throw const OrderFailure(OrderCancellation.rejectedMessage);
@@ -388,11 +423,12 @@ class DemoBowlRepository implements BowlRepository {
   }
 
   @override
-  Future<Order> markArrived(String orderId, GeoPoint location) async {
-    final index = _orders.indexWhere((order) => order.id == orderId);
-    if (index == -1) {
-      throw const OrderFailure('Pesanan tidak ditemukan.');
-    }
+  Future<Order> markArrived(
+    String orderId,
+    GeoPoint location, {
+    String? actorEmail,
+  }) async {
+    final index = _indexFor(orderId, actorEmail, 'arrive');
     final order = _orders[index];
     if (order.cancelled) {
       throw const OrderFailure('Pesanan sudah dibatalkan.');
@@ -403,8 +439,23 @@ class DemoBowlRepository implements BowlRepository {
     if (order.arrived || order.status != OrderStatus.placed) {
       throw const OrderFailure('Dapur sudah menyiapkan pesanan ini.');
     }
+    if (!location.isValid) {
+      logSecurityEvent(
+        'geofence.rejected',
+        fields: {'reason': 'invalid_location', 'order': order.displayId},
+      );
+      throw const OrderFailure('Lokasi tidak valid.');
+    }
     final distance = Geofence.distanceMeters(Geofence.store, location);
     if (distance > Geofence.radiusMeters) {
+      logSecurityEvent(
+        'geofence.rejected',
+        fields: {
+          'reason': 'outside_radius',
+          'order': order.displayId,
+          'distanceM': distance.round(),
+        },
+      );
       throw OrderFailure(
         'Anda masih ${distance.round()} m dari gerai. '
         'Dapur mulai menyiapkan saat Anda dalam radius '
@@ -424,9 +475,17 @@ class DemoBowlRepository implements BowlRepository {
   @override
   Future<void> restock(String ingredientId, int amount) async {
     if (!_stock.containsKey(ingredientId)) {
+      logSecurityEvent(
+        'stock.restock_rejected',
+        fields: {'reason': 'unknown_ingredient'},
+      );
       throw const BowlFailure('Bahan tidak ditemukan.');
     }
     if (amount < 1 || amount > 100) {
+      logSecurityEvent(
+        'stock.restock_rejected',
+        fields: {'reason': 'amount_out_of_range', 'amount': amount},
+      );
       throw const BowlFailure('Jumlah restok harus 1 sampai 100.');
     }
     _stock[ingredientId] = _stock[ingredientId]! + amount;

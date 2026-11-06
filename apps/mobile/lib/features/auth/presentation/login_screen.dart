@@ -24,7 +24,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.validate(); // Menampilkan pesan di form.
+    // login memvalidasi ulang dan mencatat penolakan ke log keamanan.
     ref
         .read(sessionProvider.notifier)
         .login(name: _name.text, email: _email.text);

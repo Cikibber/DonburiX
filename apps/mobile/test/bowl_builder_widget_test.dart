@@ -39,7 +39,8 @@ class ControlledBowlRepository implements BowlRepository {
   }
 
   @override
-  Future<Order?> findByDisplayId(String displayId) => Future.value(null);
+  Future<Order?> findByDisplayId(String displayId, {String? actorEmail}) =>
+      Future.value(null);
 
   @override
   Stream<Order> watchOrder(String orderId) => const Stream.empty();
@@ -50,7 +51,7 @@ class ControlledBowlRepository implements BowlRepository {
   }
 
   @override
-  Future<Order> cancelOrder(String orderId) {
+  Future<Order> cancelOrder(String orderId, {String? actorEmail}) {
     throw UnimplementedError('Controlled repository tidak dipakai untuk order');
   }
 
@@ -61,7 +62,11 @@ class ControlledBowlRepository implements BowlRepository {
   Stream<List<Order>> watchOrders() => Stream.value(const []);
 
   @override
-  Future<Order> markArrived(String orderId, GeoPoint location) {
+  Future<Order> markArrived(
+    String orderId,
+    GeoPoint location, {
+    String? actorEmail,
+  }) {
     throw UnimplementedError('Controlled repository tidak dipakai untuk order');
   }
 

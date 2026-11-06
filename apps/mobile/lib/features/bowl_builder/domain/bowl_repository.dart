@@ -7,11 +7,17 @@ abstract interface class BowlRepository {
   Future<CartEntry> addToCart(BowlDraft draft);
   Future<Order> createOrder(CheckoutDraft draft);
   Future<List<Order>> latestOrders();
-  Future<Order?> findByDisplayId(String displayId);
+
+  /// [actorEmail] = akun pelanggan yang meminta; null = staf/sistem.
+  Future<Order?> findByDisplayId(String displayId, {String? actorEmail});
   Stream<Order> watchOrder(String orderId);
   Future<Order> advanceStatus(String orderId);
-  Future<Order> cancelOrder(String orderId);
+  Future<Order> cancelOrder(String orderId, {String? actorEmail});
   Stream<List<Order>> watchOrders();
-  Future<Order> markArrived(String orderId, GeoPoint location);
+  Future<Order> markArrived(
+    String orderId,
+    GeoPoint location, {
+    String? actorEmail,
+  });
   Future<void> restock(String ingredientId, int amount);
 }
