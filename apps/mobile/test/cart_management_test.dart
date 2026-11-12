@@ -82,14 +82,14 @@ void main() {
     await loadWithOneBowl(tester, repository);
     await openCart(tester);
 
-    await tester.tap(find.byKey(const Key('cart-decrease-local-1')));
+    // Issue #7: tombol nonaktif di 1 porsi, jadi ketukan tidak berefek.
+    await tester.tap(
+      find.byKey(const Key('cart-decrease-local-1')),
+      warnIfMissed: false,
+    );
     await tester.pump();
 
-    expect(find.byKey(const Key('cart-error')), findsOneWidget);
-    expect(
-      find.text('Jumlah harus bilangan bulat antara 1 dan 10.'),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('cart-error')), findsNothing);
     expect(
       tester.widget<Text>(find.byKey(const Key('cart-quantity-local-1'))).data,
       '1',

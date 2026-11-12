@@ -5,7 +5,7 @@ import '../../bowl_builder/domain/bowl_models.dart';
 import '../../bowl_builder/state/bowl_providers.dart';
 import '../../orders/domain/order_models.dart';
 import '../../orders/presentation/checkout_screen.dart';
-import '../../orders/presentation/orders_screen.dart';
+import '../../orders/state/order_providers.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -41,14 +41,19 @@ class CartScreen extends ConsumerWidget {
                 for (final entry in builder.cart)
                   _CartCard(
                     entry: entry,
-                    onDecrease: () => notifier.updateCartQuantity(
-                      entry.id,
-                      entry.bowl.quantity - 1,
-                    ),
-                    onIncrease: () => notifier.updateCartQuantity(
-                      entry.id,
-                      entry.bowl.quantity + 1,
-                    ),
+                    // Di batas 1 dan 10 porsi tombol nonaktif.
+                    onDecrease: entry.bowl.quantity <= 1
+                        ? null
+                        : () => notifier.updateCartQuantity(
+                            entry.id,
+                            entry.bowl.quantity - 1,
+                          ),
+                    onIncrease: entry.bowl.quantity >= 10
+                        ? null
+                        : () => notifier.updateCartQuantity(
+                            entry.id,
+                            entry.bowl.quantity + 1,
+                          ),
                     onRemove: () => notifier.removeFromCart(entry.id),
                   ),
                 const SizedBox(height: 16),
@@ -114,8 +119,8 @@ class _CartCard extends StatelessWidget {
   });
 
   final CartEntry entry;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
   final VoidCallback onRemove;
 
   @override
@@ -215,13 +220,13 @@ class _CartEmpty extends StatelessWidget {
   }
 }
 
-class OrderSuccessScreen extends StatelessWidget {
+class OrderSuccessScreen extends ConsumerWidget {
   const OrderSuccessScreen({super.key, required this.order});
 
   final Order order;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Pesanan dibuat')),
       body: Center(
@@ -246,12 +251,8 @@ class OrderSuccessScreen extends StatelessWidget {
               FilledButton(
                 key: const Key('order-success-track'),
                 onPressed: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute<void>(
-                      builder: (context) => const OrdersScreen(),
-                    ),
-                    (route) => route.isFirst,
-                  );
+                  ref.read(homeTabProvider.notifier).select(HomeTab.orders);
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 child: const Text('Lacak Pesanan'),
               ),

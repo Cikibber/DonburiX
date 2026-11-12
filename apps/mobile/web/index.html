@@ -18,7 +18,8 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Racik rice bowl DonburiX. Prototype Flutter dengan Riverpod untuk tugas ke-4.">
+  <meta name="description" content="DonburiX: racik rice bowl sendiri, pesan takeaway atau dine-in, lalu lacak status pesanan.">
+  <meta name="theme-color" content="#C44D29">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,10 +30,25 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>DonburiX — Racik Bowl</title>
+  <title>DonburiX • Racik Bowl</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { height: 100%; margin: 0; background: #FFF9F1; }
+    #loading, noscript p {
+      position: fixed; inset: 0; margin: 0; padding: 24px;
+      display: grid; place-items: center; text-align: center;
+      font: 600 16px system-ui, sans-serif; color: #272A21;
+    }
+  </style>
 </head>
 <body>
+  <!-- Tampil selama main.dart.js dan CanvasKit dimuat; dihapus splash.js. -->
+  <div id="loading" role="status">Memuat DonburiX…</div>
+  <noscript>
+    <style>#loading { display: none; }</style>
+    <p>DonburiX memerlukan JavaScript. Aktifkan JavaScript lalu muat ulang halaman.</p>
+  </noscript>
+  <script src="splash.js"></script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

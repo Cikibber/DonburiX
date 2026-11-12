@@ -5,6 +5,7 @@ import '../../auth/state/session_provider.dart';
 import '../../bowl_builder/domain/bowl_models.dart';
 import '../../bowl_builder/state/bowl_providers.dart';
 import '../domain/order_models.dart';
+import '../domain/order_rules.dart';
 import '../state/order_providers.dart';
 import 'order_detail_screen.dart';
 
@@ -131,8 +132,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     child: ListTile(
                       title: Text(order.displayId),
                       subtitle: Text(
-                        '${order.customerName} · ${order.type.label} · ${order.totalPortions} porsi',
+                        '${order.customerName} · ${order.type.label} · ${order.totalPortions} porsi\n'
+                        '${formatOrderTime(order.createdAt)}',
                       ),
+                      isThreeLine: true,
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,

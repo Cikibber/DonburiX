@@ -78,8 +78,15 @@ const demoIngredients = [
 ];
 
 class DemoBowlRepository implements BowlRepository {
-  DemoBowlRepository({this.scenario = 'success', this.prefs}) {
+  DemoBowlRepository({
+    this.scenario = 'success',
+    this.prefs,
+    Duration? syncInterval,
+  }) {
     _restore();
+    if (syncInterval != null) {
+      _syncTimer = Timer.periodic(syncInterval, (_) => syncFromStorage());
+    }
   }
 
   static const storageKey = 'donburix.kitchen.v1';
@@ -104,10 +111,44 @@ class DemoBowlRepository implements BowlRepository {
   int _submitAttempts = 0;
   int _checkoutAttempts = 0;
 
-  void dispose() => _orderUpdates.close();
+  final StreamController<void> _stockChanges =
+      StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get stockChanges => _stockChanges.stream;
+
+  Timer? _syncTimer;
+  String? _lastRaw;
+  Future<void>? _pendingSave;
+
+  void dispose() {
+    _syncTimer?.cancel();
+    _orderUpdates.close();
+    _stockChanges.close();
+  }
+
+  /// Mengambil perubahan dari tab lain yang berbagi penyimpanan yang sama.
+  /// Dipanggil sebelum setiap perubahan agar data tab lain tidak tertimpa.
+  // ponytail: polling + last-write-wins antar tab; ganti dengan stream dari
+  // server saat backend ada.
+  Future<void> syncFromStorage() async {
+    final prefs = this.prefs;
+    if (prefs == null) return;
+    await _pendingSave;
+    await prefs.reload();
+    if (prefs.getString(storageKey) == _lastRaw) return;
+    final stockBefore = _stock.toString();
+    _restore();
+    if (_orderUpdates.isClosed) return;
+    for (final order in List.of(_orders)) {
+      _orderUpdates.add(order);
+    }
+    if (_stock.toString() != stockBefore) _stockChanges.add(null);
+  }
 
   void _restore() {
     final raw = prefs?.getString(storageKey);
+    _lastRaw = raw;
     if (raw == null) return;
     try {
       final json = jsonDecode(raw) as Map<String, Object?>;
@@ -125,7 +166,9 @@ class DemoBowlRepository implements BowlRepository {
       if (sequence < 0) throw const FormatException('Nomor urut negatif.');
       final sequenceDay = json['sequenceDay'] as String?;
       // Terapkan setelah semua lolos agar data rusak tidak masuk sebagian.
-      _orders.addAll(orders);
+      _orders
+        ..clear()
+        ..addAll(orders);
       _stock.addAll(stock);
       _sequenceDay = sequenceDay;
       _dailySequence = sequence;
@@ -142,15 +185,14 @@ class DemoBowlRepository implements BowlRepository {
   }
 
   void _save() {
-    prefs?.setString(
-      storageKey,
-      jsonEncode({
-        'orders': [for (final order in _orders) order.toJson()],
-        'stock': _stock,
-        'sequenceDay': _sequenceDay,
-        'dailySequence': _dailySequence,
-      }),
-    );
+    final raw = jsonEncode({
+      'orders': [for (final order in _orders) order.toJson()],
+      'stock': _stock,
+      'sequenceDay': _sequenceDay,
+      'dailySequence': _dailySequence,
+    });
+    _lastRaw = raw;
+    _pendingSave = prefs?.setString(storageKey, raw);
   }
 
   void _publish(Order order) {
@@ -310,6 +352,18 @@ class DemoBowlRepository implements BowlRepository {
     if (scenario == 'checkout-error' && _checkoutAttempts == 1) {
       throw const OrderFailure('Pesanan belum tersimpan. Silakan coba lagi.');
     }
+    await syncFromStorage();
+
+    final now = DateTime.now();
+    final dayKey = '${now.year}-${now.month}-${now.day}';
+    final sequence = _sequenceDay == dayKey ? _dailySequence + 1 : 1;
+    // Ditolak sebelum stok dipotong agar stok tidak bocor.
+    if (sequence > OrderIdRules.maxDailySequence) {
+      throw const OrderFailure(
+        'Batas ${OrderIdRules.maxDailySequence} pesanan per hari tercapai. '
+        'Silakan pesan kembali besok.',
+      );
+    }
 
     final checked = <CartEntry>[];
     var total = 0;
@@ -354,13 +408,8 @@ class DemoBowlRepository implements BowlRepository {
       _stock[entry.key] = (_stock[entry.key] ?? 0) - entry.value;
     }
 
-    final now = DateTime.now();
-    final dayKey = '${now.year}-${now.month}-${now.day}';
-    if (_sequenceDay != dayKey) {
-      _sequenceDay = dayKey;
-      _dailySequence = 0;
-    }
-    _dailySequence++;
+    _sequenceDay = dayKey;
+    _dailySequence = sequence;
 
     final order = Order(
       id: 'order-${_orders.length + 1}',
@@ -386,6 +435,7 @@ class DemoBowlRepository implements BowlRepository {
 
   @override
   Future<Order> advanceStatus(String orderId) async {
+    await syncFromStorage();
     final index = _orders.indexWhere((order) => order.id == orderId);
     if (index == -1) {
       throw const OrderFailure('Pesanan tidak ditemukan.');
@@ -406,6 +456,7 @@ class DemoBowlRepository implements BowlRepository {
 
   @override
   Future<Order> cancelOrder(String orderId, {String? actorEmail}) async {
+    await syncFromStorage();
     final index = _indexFor(orderId, actorEmail, 'cancel');
     final order = _orders[index];
     if (!OrderCancellation.canCancel(order)) {
@@ -428,6 +479,7 @@ class DemoBowlRepository implements BowlRepository {
     GeoPoint location, {
     String? actorEmail,
   }) async {
+    await syncFromStorage();
     final index = _indexFor(orderId, actorEmail, 'arrive');
     final order = _orders[index];
     if (order.cancelled) {
@@ -474,6 +526,7 @@ class DemoBowlRepository implements BowlRepository {
 
   @override
   Future<void> restock(String ingredientId, int amount) async {
+    await syncFromStorage();
     if (!_stock.containsKey(ingredientId)) {
       logSecurityEvent(
         'stock.restock_rejected',

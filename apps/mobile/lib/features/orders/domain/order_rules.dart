@@ -6,10 +6,11 @@ import 'order_models.dart';
 /// pencarian nomor tidak bergantung pada kapitalisasi input pelanggan.
 class OrderIdRules {
   static const prefix = 'DX';
+  static const maxDailySequence = 999;
   static final _pattern = RegExp(r'^DX-\d{8}-\d{3}$');
 
   static String next({required DateTime createdAt, required int sequence}) {
-    if (sequence < 1 || sequence > 999) {
+    if (sequence < 1 || sequence > maxDailySequence) {
       throw ArgumentError.value(sequence, 'sequence', 'Urutan 1..999');
     }
     final day =
@@ -22,6 +23,13 @@ class OrderIdRules {
   static bool isValid(String value) => _pattern.hasMatch(value.trim());
 
   static String normalize(String value) => value.trim().toUpperCase();
+}
+
+/// Jam pemesanan untuk tampilan, mis. `12/11 19:05`.
+String formatOrderTime(DateTime time) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${two(time.day)}/${two(time.month)} '
+      '${two(time.hour)}:${two(time.minute)}';
 }
 
 /// Estimasi waktu penyajian dinamis.

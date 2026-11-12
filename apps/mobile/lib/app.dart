@@ -7,6 +7,7 @@ import 'features/auth/state/session_provider.dart';
 import 'features/bowl_builder/presentation/bowl_builder_screen.dart';
 import 'features/kitchen/presentation/kitchen_screen.dart';
 import 'features/orders/presentation/orders_screen.dart';
+import 'features/orders/state/order_providers.dart';
 
 class DonburiXApp extends StatelessWidget {
   const DonburiXApp({super.key});
@@ -39,6 +40,16 @@ class DonburiXApp extends StatelessWidget {
           ),
         ),
       ),
+      // Di layar lebar (desktop) konten tetap selebar ponsel/tablet.
+      builder: (context, child) => ColoredBox(
+        color: const Color(0xFFFFF9F1),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: child,
+          ),
+        ),
+      ),
       home: const _AuthGate(),
     );
   }
@@ -54,21 +65,15 @@ class _AuthGate extends ConsumerWidget {
   }
 }
 
-class _HomeShell extends StatefulWidget {
+class _HomeShell extends ConsumerWidget {
   const _HomeShell();
 
   @override
-  State<_HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<_HomeShell> {
-  int _index = 0;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(homeTabProvider);
     return Scaffold(
       body: IndexedStack(
-        index: _index,
+        index: index,
         children: const [
           BowlBuilderScreen(),
           OrdersScreen(),
@@ -77,8 +82,8 @@ class _HomeShellState extends State<_HomeShell> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        selectedIndex: index,
+        onDestinationSelected: ref.read(homeTabProvider.notifier).select,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.rice_bowl_outlined),

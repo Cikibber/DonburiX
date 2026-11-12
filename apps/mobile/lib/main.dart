@@ -33,6 +33,8 @@ Future<void> main() async {
           DemoBowlRepository(
             scenario: scenario,
             prefs: scenario == 'success' ? prefs : null,
+            // Tab browser lain (mis. layar dapur) berbagi penyimpanan ini.
+            syncInterval: const Duration(seconds: 2),
           ),
         ),
         customerLocationProvider.overrideWithValue(

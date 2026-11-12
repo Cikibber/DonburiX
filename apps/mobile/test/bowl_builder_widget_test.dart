@@ -14,6 +14,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'test_support.dart';
 
 class ControlledBowlRepository implements BowlRepository {
+  @override
+  Stream<void> get stockChanges => const Stream.empty();
+
   final loading = Completer<List<Ingredient>>();
   var submission = Completer<CartEntry>();
   int loadCount = 0;

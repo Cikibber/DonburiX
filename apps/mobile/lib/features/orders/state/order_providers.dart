@@ -5,6 +5,18 @@ import '../../bowl_builder/state/bowl_providers.dart';
 import '../domain/geofence.dart';
 import '../domain/order_models.dart';
 
+/// Tab aktif di layar utama: 0 Racik, 1 Pesanan, 2 Dapur, 3 Profil.
+final homeTabProvider = NotifierProvider<HomeTab, int>(HomeTab.new);
+
+class HomeTab extends Notifier<int> {
+  static const orders = 1;
+
+  @override
+  int build() => 0;
+
+  void select(int index) => state = index;
+}
+
 final orderListProvider = StreamNotifierProvider<OrderList, List<Order>>(
   OrderList.new,
 );
@@ -88,7 +100,8 @@ final checkoutFormProvider =
 
 class CheckoutFormNotifier extends Notifier<CheckoutFormState> {
   @override
-  CheckoutFormState build() => const CheckoutFormState();
+  CheckoutFormState build() =>
+      CheckoutFormState(customerName: ref.watch(sessionProvider)?.name ?? '');
 
   void setCustomerName(String value) {
     if (!state.isSubmitting) state = state.copyWith(customerName: value);

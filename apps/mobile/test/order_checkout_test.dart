@@ -64,6 +64,8 @@ void main() {
     await openCart(tester);
     await openCheckout(tester);
 
+    // Issue #8: nama terisi dari akun, jadi dikosongkan dulu.
+    await tester.enterText(find.byKey(const Key('customer-name-input')), '');
     await tester.tap(find.byKey(const Key('checkout-submit')));
     await tester.pump();
 

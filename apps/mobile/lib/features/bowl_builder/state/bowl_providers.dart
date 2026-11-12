@@ -18,7 +18,10 @@ final ingredientCatalogProvider =
 class IngredientCatalog extends AsyncNotifier<List<Ingredient>> {
   @override
   Future<List<Ingredient>> build() {
-    return ref.watch(bowlRepositoryProvider).loadIngredients();
+    final repository = ref.watch(bowlRepositoryProvider);
+    final changes = repository.stockChanges.listen((_) => ref.invalidateSelf());
+    ref.onDispose(changes.cancel);
+    return repository.loadIngredients();
   }
 }
 
