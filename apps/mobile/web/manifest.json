@@ -1,11 +1,11 @@
 {
-    "name": "DonburiX Bowl Builder",
+    "name": "DonburiX",
     "short_name": "DonburiX",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFF9F1",
     "theme_color": "#C44D29",
-    "description": "Racik bowl dengan form, validasi, dan state management Riverpod.",
+    "description": "DonburiX: racik rice bowl sendiri, pesan takeaway atau dine-in, lalu lacak status pesanan.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

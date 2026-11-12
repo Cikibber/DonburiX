@@ -42,6 +42,29 @@ class OrderDetailScreen extends ConsumerWidget {
     }
 
     Future<void> cancel() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Batalkan pesanan?'),
+          content: Text(
+            'Pesanan ${live.displayId} akan dibatalkan dan tidak dapat '
+            'dipulihkan.',
+          ),
+          actions: [
+            TextButton(
+              key: const Key('cancel-dismiss'),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Tidak'),
+            ),
+            FilledButton(
+              key: const Key('cancel-confirm'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Ya, batalkan'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
       try {
         await ref
             .read(bowlRepositoryProvider)
@@ -65,6 +88,11 @@ class OrderDetailScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'Total ${formatRupiah(live.totalPrice)} · ${live.totalPortions} porsi',
+          ),
+          const SizedBox(height: 4),
+          Text(
+            key: const Key('order-time'),
+            'Dipesan ${formatOrderTime(live.createdAt)}',
           ),
           const SizedBox(height: 4),
           Text(
@@ -185,7 +213,13 @@ class _TimelineTile extends StatelessWidget {
               key: Key('timeline-${status.name}'),
               color: done ? Colors.green : Colors.grey,
             ),
-            if (!isLast) const SizedBox(height: 4, child: Text('│')),
+            if (!isLast)
+              Container(
+                key: Key('timeline-line-${status.name}'),
+                width: 2,
+                height: 16,
+                color: done ? Colors.green : Colors.grey.shade400,
+              ),
           ],
         ),
         const SizedBox(width: 12),

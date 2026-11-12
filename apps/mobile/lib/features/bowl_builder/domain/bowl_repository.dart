@@ -20,4 +20,7 @@ abstract interface class BowlRepository {
     String? actorEmail,
   });
   Future<void> restock(String ingredientId, int amount);
+
+  /// Stok berubah dari luar aplikasi ini, mis. tab browser lain.
+  Stream<void> get stockChanges;
 }

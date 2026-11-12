@@ -226,7 +226,8 @@ class _KitchenOrderCard extends StatelessWidget {
             ),
             Text(
               '${order.customerName} · ${order.type.label} · '
-              '${order.totalPortions} porsi · ${OrderEta.label(order.estimatedMinutes)}',
+              '${order.totalPortions} porsi · ${OrderEta.label(order.estimatedMinutes)}\n'
+              'Dipesan ${formatOrderTime(order.createdAt)}',
             ),
             if (order.type == OrderType.takeaway)
               Padding(

@@ -41,7 +41,7 @@ class KdsAccessNotifier extends Notifier<KdsAccess> {
     final until = state.lockedUntil;
     if (until != null && now.isBefore(until)) {
       logSecurityEvent('kds.pin_blocked');
-      return 'Terlalu banyak percobaan. Coba lagi dalam 1 menit.';
+      return _lockedMessage(until.difference(now));
     }
     if (pin == expected) {
       logSecurityEvent('kds.unlocked', level: 'info');
@@ -52,12 +52,16 @@ class KdsAccessNotifier extends Notifier<KdsAccess> {
     if (failures >= maxAttempts) {
       logSecurityEvent('kds.locked_out', fields: {'attempts': failures});
       state = KdsAccess(lockedUntil: now.add(lockout));
-      return 'Terlalu banyak percobaan. Coba lagi dalam 1 menit.';
+      return _lockedMessage(lockout);
     }
     logSecurityEvent('kds.pin_denied', fields: {'attempt': failures});
     state = KdsAccess(failures: failures);
     return 'PIN salah.';
   }
+
+  static String _lockedMessage(Duration remaining) =>
+      'Terlalu banyak percobaan. Coba lagi dalam '
+      '${(remaining.inMilliseconds / 1000).ceil()} detik.';
 
   /// Hitungan gagal tetap ada agar keluar-masuk tidak melewati penguncian.
   void lock() => state = KdsAccess(

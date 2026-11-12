@@ -45,6 +45,7 @@ class ProfileScreen extends ConsumerWidget {
               // Keranjang dan form milik akun lama tidak ikut terbawa.
               ref.invalidate(bowlBuilderProvider);
               ref.invalidate(checkoutFormProvider);
+              ref.invalidate(homeTabProvider);
               ref.read(kdsAccessProvider.notifier).lock();
               ref.read(sessionProvider.notifier).logout();
             },
