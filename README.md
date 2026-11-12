@@ -141,7 +141,7 @@ flutter analyze
 flutter test --coverage
 ```
 
-Hasil yang diharapkan: analyze tanpa temuan dan **103 test lulus**.
+Hasil yang diharapkan: analyze tanpa temuan dan **114 test lulus**.
 
 ### Build dan deployment
 
@@ -175,7 +175,7 @@ Pada fork, aktifkan **Settings > Pages > Source: GitHub Actions**, lalu sesuaika
 | Gejala | Penyebab | Solusi |
 | --- | --- | --- |
 | Dapur menampilkan "belum dikonfigurasi" | Build tanpa `KDS_PIN` | Tambahkan `--dart-define=KDS_PIN=4826` |
-| Dapur "Terlalu banyak percobaan" | Lima PIN salah | Tunggu 1 menit atau muat ulang halaman |
+| Dapur "Terlalu banyak percobaan" | Lima PIN salah | Tunggu sisa detik yang tertulis di pesan, atau muat ulang halaman |
 | `--enforce-lockfile` gagal | Versi Flutter berbeda | Pakai Flutter 3.44.1 |
 | Halaman kosong saat disajikan lokal | `BASE_HREF` tidak cocok dengan alamat | Build dengan `BASE_HREF=/` |
 | `?scenario=` tidak berpengaruh | Build release mengabaikan hook demo | Pakai `flutter run` |
@@ -185,3 +185,22 @@ Pada fork, aktifkan **Settings > Pages > Source: GitHub Actions**, lalu sesuaika
 * [Hasil uji keamanan dan change log](docs/tugas8/security_test_results.md)
 * [Contoh log keamanan, penyebab, dan remediasi](docs/tugas8/security_logs.md)
 * [Laporan clone bersih, PR, build, dan deployment](docs/tugas8/fresh_clone_report.md)
+
+## 10. Deployment ke VPS atau Pi (Tugas 9)
+
+Aplikasi bisa disajikan di `https://<IP>/DonburiX/` oleh nginx pada VPS,
+Raspberry Pi, atau Orange Pi:
+
+```sh
+DEPLOY_HOST=<IP server> DEPLOY_USER=root KDS_PIN=4826 ./scripts/deploy-vps.sh
+```
+
+Rancangan, prasyarat, hasil uji, dan status ada di
+[`docs/tugas9/deployment.md`](docs/tugas9/deployment.md).
+
+## 11. Bug Setelah Deployment (Tugas 10)
+
+Tiga belas bug ditemukan pada aplikasi yang sudah di-deploy, dicatat sebagai
+[GitHub Issues #3 sampai #15](https://github.com/Cikibber/DonburiX/issues?q=is%3Aissue),
+dan diperbaiki di [PR #16](https://github.com/Cikibber/DonburiX/pull/16).
+Ringkasan dan bukti uji ada di [`docs/tugas10/issues.md`](docs/tugas10/issues.md).
